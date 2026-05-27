@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Manage your events and bookings on EventHub.">
+    <title>Dashboard — EventHub</title>
+    <link rel="stylesheet" href="css/styles.css?v=p3r">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <!-- Persona 3 Reload Animated Background Particles -->
+    <div class="p3r-bg-container">
+        <div class="p3r-bubble bubble-1"></div>
+        <div class="p3r-bubble bubble-2"></div>
+        <div class="p3r-bubble bubble-3"></div>
+        <div class="p3r-bubble bubble-4"></div>
+        <div class="p3r-bubble bubble-5"></div>
+        <div class="p3r-bubble bubble-6"></div>
+        <div class="p3r-wave wave-1"></div>
+        <div class="p3r-wave wave-2"></div>
+        <div class="p3r-grid-overlay"></div>
+    </div>
+
+    <!-- ─── Navigation ─────────────────────────────────────── -->
+    <nav class="navbar" id="navbar">
+        <div class="navbar__inner container">
+            <a href="index.html" class="navbar__brand">
+                <span class="navbar__icon">⚡</span>
+                <span class="navbar__name">EventHub</span>
+            </a>
+            <div class="navbar__links">
+                <span id="nav-user-name" class="navbar__greeting"></span>
+                <a href="index.html" class="btn btn--ghost btn--sm"><span>Browse Events</span></a>
+                <button id="nav-logout" class="btn btn--outline btn--sm"><span>Logout</span></button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- ─── Dashboard Content ──────────────────────────────── -->
+    <main class="dashboard container">
+
+        <header class="dashboard__header">
+            <h1>Your Dashboard</h1>
+        </header>
+
+        <!-- ─── Tabs ───────────────────────────────────────── -->
+        <div class="tabs" id="dashboard-tabs">
+            <button class="tab active" data-tab="my-events">My Events</button>
+            <button class="tab" data-tab="my-bookings">My Bookings</button>
+        </div>
+
+        <!-- ═══════ My Events Tab ═══════ -->
+        <section id="tab-my-events" class="tab-panel active">
+            <div class="tab-panel__header">
+                <h2>Events You Created</h2>
+                <button id="btn-new-event" class="btn btn--primary"><span>+ New Event</span></button>
+            </div>
+
+            <div id="my-events-list" class="my-events-list">
+                <!-- Dynamically populated -->
+            </div>
+            <div id="my-events-empty" class="empty-state hidden">
+                <p class="empty-state__icon">📅</p>
+                <p class="empty-state__text">You haven't created any events yet.</p>
+            </div>
+        </section>
+
+        <!-- ═══════ My Bookings Tab ═══════ -->
+        <section id="tab-my-bookings" class="tab-panel hidden">
+            <h2>Your Booked Tickets</h2>
+
+            <div id="my-bookings-list" class="my-bookings-list">
+                <!-- Dynamically populated -->
+            </div>
+            <div id="my-bookings-empty" class="empty-state hidden">
+                <p class="empty-state__icon">🎟️</p>
+                <p class="empty-state__text">You haven't booked any events yet. <a href="index.html" class="link">Browse events</a></p>
+            </div>
+        </section>
+    </main>
+
+    <!-- ─── Event Form Modal ───────────────────────────────── -->
+    <div id="event-form-modal" class="modal hidden">
+        <div class="modal__backdrop" id="event-form-backdrop"></div>
+        <div class="modal__content modal__content--wide">
+            <button class="modal__close" id="event-form-close">&times;</button>
+            <h2 class="modal__title" id="event-form-title">Create New Event</h2>
+
+            <div id="event-form-error" class="auth-error" style="display:none;"></div>
+            <div id="event-form-success" class="auth-success" style="display:none;"></div>
+
+            <form id="event-form" novalidate>
+                <input type="hidden" id="event-form-id" value="">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="event-form-name">Event Title</label>
+                        <input type="text" id="event-form-name" class="input" placeholder="Enter event title" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="event-form-type">Event Type</label>
+                        <select id="event-form-type" class="input" required>
+                            <option value="">Select Type</option>
+                            <option value="Concert">Concert</option>
+                            <option value="Workshop">Workshop</option>
+                            <option value="Meetup">Meetup</option>
+                            <option value="Conference">Conference</option>
+                            <option value="Sports">Sports</option>
+                            <option value="Exhibition">Exhibition</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="event-form-date">Event Date &amp; Time</label>
+                        <input type="datetime-local" id="event-form-date" class="input" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="event-form-seats">Total Seats</label>
+                        <input type="number" id="event-form-seats" class="input" min="1" placeholder="e.g. 100" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="event-form-desc">Description</label>
+                    <textarea id="event-form-desc" class="input input--textarea" rows="4" placeholder="Describe your event…"></textarea>
+                </div>
+                <div class="form-actions">
+                    <button type="button" id="event-form-cancel" class="btn btn--ghost"><span>Cancel</span></button>
+                    <button type="submit" id="event-form-submit" class="btn btn--primary" data-label="Save Event"><span>Save Event</span></button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ─── Confirm Dialog ─────────────────────────────────── -->
+    <div id="confirm-modal" class="modal hidden">
+        <div class="modal__backdrop" id="confirm-backdrop"></div>
+        <div class="modal__content modal__content--small">
+            <h3 id="confirm-title">Are you sure?</h3>
+            <p id="confirm-message"></p>
+            <div class="form-actions">
+                <button id="confirm-no" class="btn btn--ghost"><span>No</span></button>
+                <button id="confirm-yes" class="btn btn--danger"><span>Yes</span></button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ─── Footer ─────────────────────────────────────────── -->
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2026 EventHub. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script src="js/dashboard.js"></script>
+</body>
+</html>

@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Sign in or create an account for the Event Booking System.">
+    <title>Sign In — EventHub</title>
+    <link rel="stylesheet" href="css/styles.css?v=p3r">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <!-- Persona 3 Reload Animated Background Particles -->
+    <div class="p3r-bg-container">
+        <div class="p3r-bubble bubble-1"></div>
+        <div class="p3r-bubble bubble-2"></div>
+        <div class="p3r-bubble bubble-3"></div>
+        <div class="p3r-bubble bubble-4"></div>
+        <div class="p3r-bubble bubble-5"></div>
+        <div class="p3r-bubble bubble-6"></div>
+        <div class="p3r-wave wave-1"></div>
+        <div class="p3r-wave wave-2"></div>
+        <div class="p3r-grid-overlay"></div>
+    </div>
+
+    <main class="auth-container">
+        <!-- ─── Brand ──────────────────────────────────────── -->
+        <div class="auth-brand">
+            <a href="index.html" class="auth-brand__logo">
+                <span class="auth-brand__icon">⚡</span>
+                <span class="auth-brand__name">EventHub</span>
+            </a>
+            <p class="auth-brand__tagline">Discover &amp; book amazing events near you</p>
+        </div>
+
+        <!-- ═══════ Login Card ═══════ -->
+        <div id="login-card" class="auth-card">
+            <h1 class="auth-card__title">Welcome Back</h1>
+            <p class="auth-card__subtitle">Sign in to your account</p>
+
+            <div id="login-error" class="auth-error" style="display:none;"></div>
+
+            <form id="login-form" novalidate>
+                <div class="form-group">
+                    <label for="login-email">Email Address</label>
+                    <input type="email" id="login-email" placeholder="you@example.com" required autocomplete="email" class="input">
+                </div>
+                <div class="form-group">
+                    <label for="login-password">Password</label>
+                    <input type="password" id="login-password" placeholder="••••••••" required autocomplete="current-password" class="input">
+                </div>
+                <button type="submit" class="btn btn--primary btn--full" data-label="Sign In"><span>Sign In</span></button>
+            </form>
+
+            <p class="auth-card__footer">
+                Don't have an account?
+                <a href="#" data-toggle-auth class="link">Create one</a>
+            </p>
+        </div>
+
+        <!-- ═══════ Register Card ═══════ -->
+        <div id="register-card" class="auth-card hidden">
+            <h1 class="auth-card__title">Create Account</h1>
+            <p class="auth-card__subtitle">Join EventHub today</p>
+
+            <div id="register-error" class="auth-error" style="display:none;"></div>
+
+            <form id="register-form" novalidate>
+                <div class="form-group">
+                    <label for="register-name">Full Name</label>
+                    <input type="text" id="register-name" placeholder="Jane Doe" required autocomplete="name" class="input">
+                </div>
+                <div class="form-group">
+                    <label for="register-email">Email Address</label>
+                    <input type="email" id="register-email" placeholder="you@example.com" required autocomplete="email" class="input">
+                </div>
+                <div class="form-group">
+                    <label for="register-password">Password</label>
+                    <input type="password" id="register-password" placeholder="Min 6 characters" required autocomplete="new-password" class="input">
+                </div>
+                <div class="form-group">
+                    <label for="register-confirm">Confirm Password</label>
+                    <input type="password" id="register-confirm" placeholder="Re-enter password" required autocomplete="new-password" class="input">
+                </div>
+                <button type="submit" class="btn btn--primary btn--full" data-label="Create Account"><span>Create Account</span></button>
+            </form>
+
+            <p class="auth-card__footer">
+                Already have an account?
+                <a href="#" data-toggle-auth class="link">Sign in</a>
+            </p>
+        </div>
+    </main>
+
+    <script src="js/auth.js"></script>
+</body>
+</html>

@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Browse and book exciting events on EventHub. Find concerts, workshops, meetups and more.">
+    <title>EventHub — Discover Events</title>
+    <link rel="stylesheet" href="css/styles.css?v=p3r">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <!-- Persona 3 Reload Animated Background Particles -->
+    <div class="p3r-bg-container">
+        <div class="p3r-bubble bubble-1"></div>
+        <div class="p3r-bubble bubble-2"></div>
+        <div class="p3r-bubble bubble-3"></div>
+        <div class="p3r-bubble bubble-4"></div>
+        <div class="p3r-bubble bubble-5"></div>
+        <div class="p3r-bubble bubble-6"></div>
+        <div class="p3r-wave wave-1"></div>
+        <div class="p3r-wave wave-2"></div>
+        <div class="p3r-grid-overlay"></div>
+    </div>
+
+    <!-- ─── Navigation ─────────────────────────────────────── -->
+    <nav class="navbar" id="navbar">
+        <div class="navbar__inner container">
+            <a href="index.html" class="navbar__brand">
+                <span class="navbar__icon">⚡</span>
+                <span class="navbar__name">EventHub</span>
+            </a>
+            <div class="navbar__links">
+                <!-- Logged-out links -->
+                <div id="nav-guest">
+                    <a href="auth.html" class="btn btn--outline btn--sm"><span>Sign In</span></a>
+                </div>
+                <!-- Logged-in links -->
+                <div id="nav-user" class="hidden">
+                    <a href="dashboard.html" class="btn btn--ghost btn--sm"><span>Dashboard</span></a>
+                    <button id="nav-logout" class="btn btn--outline btn--sm"><span>Logout</span></button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- ─── Hero Section ───────────────────────────────────── -->
+    <header class="hero">
+        <div class="hero__inner container">
+            <h1 class="hero__title">Discover <span class="gradient-text">Amazing Events</span></h1>
+            <p class="hero__subtitle">Find concerts, workshops, meetups, and more — all in one place.</p>
+        </div>
+    </header>
+
+    <!-- ─── Filters ────────────────────────────────────────── -->
+    <section class="filters container" id="filters-section">
+        <div class="filters__bar">
+            <div class="filters__search">
+                <input type="text" id="filter-search" placeholder="Search events…" class="input">
+            </div>
+            <div class="filters__group">
+                <select id="filter-type" class="input">
+                    <option value="">All Types</option>
+                    <option value="Concert">Concert</option>
+                    <option value="Workshop">Workshop</option>
+                    <option value="Meetup">Meetup</option>
+                    <option value="Conference">Conference</option>
+                    <option value="Sports">Sports</option>
+                    <option value="Exhibition">Exhibition</option>
+                    <option value="Other">Other</option>
+                </select>
+                <input type="date" id="filter-date-from" class="input" title="From date">
+                <input type="date" id="filter-date-to" class="input" title="To date">
+                <button id="filter-btn" class="btn btn--primary btn--sm"><span>Apply</span></button>
+                <button id="filter-reset" class="btn btn--ghost btn--sm"><span>Reset</span></button>
+            </div>
+        </div>
+    </section>
+
+    <!-- ─── Events Grid ────────────────────────────────────── -->
+    <main class="container">
+        <div id="events-grid" class="events-grid">
+            <!-- Dynamically populated -->
+        </div>
+        <div id="events-empty" class="empty-state hidden">
+            <p class="empty-state__icon">🎭</p>
+            <p class="empty-state__text">No events found. Try adjusting your filters!</p>
+        </div>
+        <div id="events-loading" class="loading-spinner">
+            <div class="spinner"></div>
+        </div>
+    </main>
+
+    <!-- ─── Event Details Modal ────────────────────────────── -->
+    <div id="event-modal" class="modal hidden">
+        <div class="modal__backdrop" id="modal-backdrop"></div>
+        <div class="modal__content">
+            <button class="modal__close" id="modal-close">&times;</button>
+            <div class="modal__badge" id="modal-type"></div>
+            <h2 class="modal__title" id="modal-title"></h2>
+            <div class="modal__meta">
+                <span id="modal-date"></span>
+                <span id="modal-host"></span>
+            </div>
+            <p class="modal__desc" id="modal-desc"></p>
+            <div class="modal__seats">
+                <div class="seats-bar">
+                    <div class="seats-bar__fill" id="modal-seats-bar"></div>
+                </div>
+                <span id="modal-seats-text"></span>
+            </div>
+            <div class="modal__actions">
+                <button id="modal-book-btn" class="btn btn--primary"><span>Book Now</span></button>
+            </div>
+            <div id="modal-message" class="auth-error" style="display:none;"></div>
+        </div>
+    </div>
+
+    <!-- ─── Footer ─────────────────────────────────────────── -->
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2026 EventHub. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script src="js/events.js"></script>
+</body>
+</html>
