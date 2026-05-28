@@ -145,8 +145,8 @@
                 <h3 class="event-row__title">${escapeHtml(ev.title)}</h3>
                 <p class="event-row__meta">
                     <span class="badge badge--${ev.event_type.toLowerCase()}">${escapeHtml(ev.event_type)}</span>
-                    <span>📅 ${dateStr} at ${timeStr}</span>
-                    <span>🎟️ ${booked} / ${ev.total_seats} booked</span>
+                    <span>${dateStr} at ${timeStr}</span>
+                    <span>${booked} / ${ev.total_seats} booked</span>
                 </p>
             </div>
             <div class="event-row__actions">
@@ -175,6 +175,7 @@
         eventFormId.value    = '';
         eventFormName.value  = '';
         eventFormType.value  = '';
+        eventFormType.dispatchEvent(new Event('change'));
         eventFormDate.value  = '';
         eventFormSeats.value = '';
         eventFormDesc.value  = '';
@@ -190,6 +191,7 @@
         eventFormId.value    = ev.id;
         eventFormName.value  = ev.title;
         eventFormType.value  = ev.event_type;
+        eventFormType.dispatchEvent(new Event('change'));
         eventFormSeats.value = ev.total_seats;
         eventFormDesc.value  = ev.description || '';
 
@@ -315,8 +317,8 @@
                 <h3 class="booking-row__title ${isCancelled ? 'cancelled-text' : ''}">${escapeHtml(b.title)}</h3>
                 <p class="booking-row__meta">
                     <span class="badge badge--${b.event_type.toLowerCase()}">${escapeHtml(b.event_type)}</span>
-                    <span>📅 ${dateStr} at ${timeStr}</span>
-                    <span>🎟️ Booked on ${bookedOn}</span>
+                    <span>${dateStr} at ${timeStr}</span>
+                    <span>Booked on ${bookedOn}</span>
                 </p>
             </div>
             <div class="booking-row__actions">

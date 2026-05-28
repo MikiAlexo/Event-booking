@@ -131,7 +131,7 @@
             <div class="event-card__body">
                 <span class="event-card__type">${escapeHtml(ev.event_type)}</span>
                 <h3 class="event-card__title">${escapeHtml(ev.title)}</h3>
-                <p class="event-card__time">🕐 ${time}</p>
+                <p class="event-card__time">${time}</p>
                 <p class="event-card__host">by ${escapeHtml(ev.creator_name)}</p>
                 <div class="event-card__footer">
                     <span class="event-card__seats ${seatsClass}">
@@ -154,11 +154,11 @@
         modalTitle.textContent = ev.title;
 
         const dateObj = new Date(ev.event_date);
-        modalDate.textContent = '📅 ' + dateObj.toLocaleString('en-US', {
+        modalDate.textContent = dateObj.toLocaleString('en-US', {
             weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
             hour: 'numeric', minute: '2-digit', hour12: true
         });
-        modalHost.textContent = '👤 Hosted by ' + ev.creator_name;
+        modalHost.textContent = 'Hosted by ' + ev.creator_name;
         modalDesc.textContent = ev.description || 'No description provided.';
 
         const pct = ev.total_seats > 0
@@ -225,7 +225,7 @@
             }
 
             modalMessage.className = 'auth-success';
-            modalMessage.textContent = '✅ Booking confirmed! Check your dashboard for details.';
+            modalMessage.textContent = 'Booking confirmed! Check your dashboard for details.';
             modalMessage.style.display = 'block';
 
             // Refresh events after a short delay
@@ -263,6 +263,7 @@
     filterReset.addEventListener('click', () => {
         filterSearch.value   = '';
         filterType.value     = '';
+        filterType.dispatchEvent(new Event('change'));
         filterDateFrom.value = '';
         filterDateTo.value   = '';
         loadEvents();

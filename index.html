@@ -29,7 +29,11 @@
     <nav class="navbar" id="navbar">
         <div class="navbar__inner container">
             <a href="index.html" class="navbar__brand">
-                <span class="navbar__icon">⚡</span>
+                <span class="navbar__icon">
+                    <svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="square" stroke-linejoin="miter" style="width:1.25rem; height:1.25rem;">
+                        <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+                    </svg>
+                </span>
                 <span class="navbar__name">EventHub</span>
             </a>
             <div class="navbar__links">
@@ -85,7 +89,12 @@
             <!-- Dynamically populated -->
         </div>
         <div id="events-empty" class="empty-state hidden">
-            <p class="empty-state__icon">🎭</p>
+            <div class="empty-state__icon" style="display:flex; justify-content:center; margin-bottom:1.5rem;">
+                <svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" style="width:3rem; height:3rem; color:var(--color-primary);">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+            </div>
             <p class="empty-state__text">No events found. Try adjusting your filters!</p>
         </div>
         <div id="events-loading" class="loading-spinner">
@@ -125,6 +134,7 @@
         </div>
     </footer>
 
+    <script src="js/p3r-dropdown.js"></script>
     <script src="js/events.js"></script>
 </body>
 </html>

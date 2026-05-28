@@ -2,7 +2,7 @@
    EventHub — Persona 3 Reload Visual Theme Stylesheet
    ═════════════════════════════════════════════════════════════ */
 
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&family=Syne:wght@700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&family=Montserrat:wght@800;900&display=swap');
 
 /* ─── Design Tokens ──────────────────────────────────────── */
 :root {
@@ -41,7 +41,7 @@
     /* Typography */
     --font-family:  'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
     --font-heading: 'Space Grotesk', sans-serif;
-    --font-stylized: 'Syne', sans-serif;
+    --font-stylized: 'Montserrat', sans-serif;
 
     /* Spacing */
     --space-xs: 0.25rem;
@@ -1451,3 +1451,109 @@ select.input {
         white-space: nowrap;
     }
 }
+
+/* ═════════════════════════════════════════════════════════════
+   CUSTOM PERSONA 3 RELOAD DROPDOWN LIST SYSTEM
+   ═════════════════════════════════════════════════════════════ */
+
+.p3r-dropdown-container {
+    position: relative;
+    width: 100%;
+    cursor: pointer;
+    outline: none;
+    user-select: none;
+    z-index: 90;
+    margin-bottom: 2px;
+}
+
+.p3r-dropdown-trigger {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    background: #050F1A;
+    border: 2px solid #00E5FF;
+    border-radius: 0 !important;
+    transform: skewX(-10deg);
+    transition: all var(--transition-fast);
+}
+
+.p3r-dropdown-trigger-label {
+    display: inline-block;
+    transform: skewX(10deg);
+    color: #FFFFFF;
+    font-family: var(--font-heading);
+    font-style: italic;
+    font-weight: 800;
+    text-transform: uppercase;
+    font-size: 0.85rem;
+    letter-spacing: 0.05em;
+}
+
+.p3r-dropdown-arrow {
+    width: 10px;
+    height: 10px;
+    color: #00E5FF;
+    transform: skewX(10deg);
+    transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.p3r-dropdown-container.open .p3r-dropdown-arrow {
+    transform: skewX(10deg) rotate(180deg);
+}
+
+.p3r-dropdown-container.open .p3r-dropdown-trigger {
+    box-shadow: 0 0 10px rgba(0, 229, 255, 0.4);
+}
+
+.p3r-dropdown-options {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    right: 0;
+    background: #050F1A;
+    border: 2px solid #00E5FF;
+    border-radius: 0 !important;
+    transform: skewX(-10deg);
+    box-shadow: 4px 4px 0px #00E5FF;
+    z-index: 1000;
+    max-height: 240px;
+    overflow-y: auto;
+}
+
+/* Custom scrollbar for dropdown options */
+.p3r-dropdown-options::-webkit-scrollbar {
+    width: 6px;
+}
+.p3r-dropdown-options::-webkit-scrollbar-track {
+    background: #050F1A;
+}
+.p3r-dropdown-options::-webkit-scrollbar-thumb {
+    background: #00E5FF;
+}
+
+.p3r-dropdown-option {
+    padding: 0.75rem 1.25rem;
+    color: #FFFFFF;
+    font-family: var(--font-heading);
+    font-style: italic;
+    font-weight: 800;
+    text-transform: uppercase;
+    font-size: 0.8rem;
+    letter-spacing: 0.05em;
+    transition: none; /* instant inversion as specified */
+}
+
+/* Invert colors instantly on hover and highlight */
+.p3r-dropdown-option.highlighted,
+.p3r-dropdown-option:hover {
+    background: #00E5FF;
+    color: #050F1A !important;
+}
+
+/* Keep option text aligned properly */
+.p3r-dropdown-option span {
+    display: inline-block;
+    transform: skewX(10deg);
+}
+
