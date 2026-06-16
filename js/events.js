@@ -15,6 +15,7 @@
     const eventsLoading = document.getElementById('events-loading');
 
     const filterSearch   = document.getElementById('filter-search');
+    const filterLocation = document.getElementById('filter-location');
     const filterType     = document.getElementById('filter-type');
     const filterDateFrom = document.getElementById('filter-date-from');
     const filterDateTo   = document.getElementById('filter-date-to');
@@ -29,6 +30,8 @@
     const modalTitle     = document.getElementById('modal-title');
     const modalDate      = document.getElementById('modal-date');
     const modalHost      = document.getElementById('modal-host');
+    const modalLocation  = document.getElementById('modal-location');
+    const modalPrice     = document.getElementById('modal-price');
     const modalDesc      = document.getElementById('modal-desc');
     const modalSeatsBar  = document.getElementById('modal-seats-bar');
     const modalSeatsText = document.getElementById('modal-seats-text');
@@ -36,16 +39,19 @@
     const modalMessage   = document.getElementById('modal-message');
 
     // Nav auth elements
-    const navGuest  = document.getElementById('nav-guest');
-    const navUser   = document.getElementById('nav-user');
-    const navLogout = document.getElementById('nav-logout');
+    const navGuest   = document.getElementById('nav-guest');
+    const navUser    = document.getElementById('nav-user');
+    const navLogout  = document.getElementById('nav-logout');
+    const navBalance = document.getElementById('nav-balance');
 
     let currentUser = null;
     let selectedEventId = null;
+    let savedEventsIds = [];
 
     // ─── Init ───────────────────────────────────────────────
     async function init() {
         await checkAuth();
+        if (currentUser) await loadSavedEventsIds();
         loadEvents();
     }
 
@@ -58,6 +64,7 @@
                 currentUser = data.user;
                 navGuest.classList.add('hidden');
                 navUser.classList.remove('hidden');
+                if(navBalance) navBalance.innerHTML = `<span>Balance: ${Number(data.user.balance).toFixed(2)} ETB</span>`;
             } else {
                 currentUser = null;
                 navGuest.classList.remove('hidden');
@@ -66,6 +73,16 @@
         } catch (e) {
             currentUser = null;
         }
+    }
+
+    async function loadSavedEventsIds() {
+        try {
+            const res = await fetch(`${API_EVENTS}?action=saved`);
+            const data = await res.json();
+            if (Array.isArray(data)) {
+                savedEventsIds = data.map(e => e.id);
+            }
+        } catch(e) {}
     }
 
     // ─── Logout ─────────────────────────────────────────────
@@ -112,7 +129,7 @@
         card.className = 'event-card';
         card.dataset.id = ev.id;
 
-        const dateObj = new Date(ev.event_date);
+        const dateObj = parseSQLDate(ev.event_date);
         const month   = dateObj.toLocaleString('en-US', { month: 'short' }).toUpperCase();
         const day     = dateObj.getDate();
         const time    = dateObj.toLocaleString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
@@ -122,6 +139,9 @@
             : 100;
 
         const seatsClass = ev.available_seats <= 0 ? 'sold-out' : (pct >= 80 ? 'almost-full' : '');
+        
+        const price = Number(ev.ticket_price) > 0 ? `${Number(ev.ticket_price).toFixed(2)} ETB` : 'FREE';
+        const isSaved = savedEventsIds.includes(ev.id);
 
         card.innerHTML = `
             <div class="event-card__date-badge">
@@ -129,13 +149,19 @@
                 <span class="event-card__day">${day}</span>
             </div>
             <div class="event-card__body">
-                <span class="event-card__type">${escapeHtml(ev.event_type)}</span>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 0.5rem;">
+                    <span class="event-card__type">${escapeHtml(ev.event_type)}</span>
+                    <button class="btn btn--icon btn-save" title="${isSaved ? 'Unsave Event' : 'Save Event'}" style="background:transparent; border:none; cursor:pointer; color: ${isSaved ? 'var(--color-primary)' : '#aaa'};">
+                        <svg viewBox="0 0 24 24" fill="${isSaved ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2" style="width:1.5rem; height:1.5rem;"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg>
+                    </button>
+                </div>
                 <h3 class="event-card__title">${escapeHtml(ev.title)}</h3>
-                <p class="event-card__time">${time}</p>
+                <p class="event-card__time">${time} • ${escapeHtml(ev.location || 'Online')}</p>
                 <p class="event-card__host">by ${escapeHtml(ev.creator_name)}</p>
                 <div class="event-card__footer">
+                    <span style="font-weight:bold; color:var(--color-primary);">${price}</span>
                     <span class="event-card__seats ${seatsClass}">
-                        ${ev.available_seats <= 0 ? 'Sold Out' : ev.available_seats + ' seats left'}
+                        ${ev.available_seats <= 0 ? 'Waitlist Available' : ev.available_seats + ' seats left'}
                     </span>
                     <button class="btn btn--sm btn--primary event-card__view-btn"><span>View</span></button>
                 </div>
@@ -143,6 +169,36 @@
         `;
 
         card.querySelector('.event-card__view-btn').addEventListener('click', () => openModal(ev));
+        
+        const saveBtn = card.querySelector('.btn-save');
+        saveBtn.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            if (!currentUser) {
+                window.location.href = 'auth.html';
+                return;
+            }
+            const currentSaved = savedEventsIds.includes(ev.id);
+            const action = currentSaved ? 'unsave' : 'save';
+            try {
+                const res = await fetch(`${API_EVENTS}?action=${action}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ event_id: ev.id })
+                });
+                if(res.ok) {
+                    if (currentSaved) {
+                        savedEventsIds = savedEventsIds.filter(id => id !== ev.id);
+                        saveBtn.style.color = '#aaa';
+                        saveBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:1.5rem; height:1.5rem;"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg>`;
+                    } else {
+                        savedEventsIds.push(ev.id);
+                        saveBtn.style.color = 'var(--color-primary)';
+                        saveBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" style="width:1.5rem; height:1.5rem;"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg>`;
+                    }
+                }
+            } catch(e) {}
+        });
+
         return card;
     }
 
@@ -153,13 +209,31 @@
         modalType.textContent = ev.event_type;
         modalTitle.textContent = ev.title;
 
-        const dateObj = new Date(ev.event_date);
+        const dateObj = parseSQLDate(ev.event_date);
         modalDate.textContent = dateObj.toLocaleString('en-US', {
             weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
             hour: 'numeric', minute: '2-digit', hour12: true
         });
         modalHost.textContent = 'Hosted by ' + ev.creator_name;
+        if(modalLocation) modalLocation.textContent = 'Location: ' + (ev.location || 'Online');
+        if(modalPrice) {
+            const price = Number(ev.ticket_price);
+            modalPrice.textContent = 'Price: ' + (price > 0 ? price.toFixed(2) + ' ETB' : 'FREE');
+        }
         modalDesc.textContent = ev.description || 'No description provided.';
+
+        const modalSaveBtn = document.getElementById('modal-save-btn');
+        if (modalSaveBtn) {
+            const isSaved = savedEventsIds.includes(ev.id);
+            modalSaveBtn.innerHTML = `<span>${isSaved ? 'Saved' : 'Save Event'}</span>`;
+            if (isSaved) {
+                modalSaveBtn.classList.remove('btn--outline');
+                modalSaveBtn.classList.add('btn--primary');
+            } else {
+                modalSaveBtn.classList.add('btn--outline');
+                modalSaveBtn.classList.remove('btn--primary');
+            }
+        }
 
         const pct = ev.total_seats > 0
             ? Math.round(((ev.total_seats - ev.available_seats) / ev.total_seats) * 100)
@@ -169,11 +243,10 @@
         modalSeatsBar.className = 'seats-bar__fill' + (pct >= 80 ? ' seats-bar__fill--danger' : '');
         modalSeatsText.textContent = `${ev.available_seats} / ${ev.total_seats} seats available`;
 
+        modalBookBtn.disabled = false;
         if (ev.available_seats <= 0) {
-            modalBookBtn.disabled = true;
-            modalBookBtn.textContent = 'Sold Out';
+            modalBookBtn.textContent = 'Join Waitlist';
         } else {
-            modalBookBtn.disabled = false;
             modalBookBtn.textContent = 'Book Now';
         }
 
@@ -204,7 +277,8 @@
         }
 
         modalBookBtn.disabled = true;
-        modalBookBtn.textContent = 'Booking…';
+        const isWaitlist = modalBookBtn.textContent.includes('Waitlist');
+        modalBookBtn.textContent = isWaitlist ? 'Joining…' : 'Booking…';
         modalMessage.style.display = 'none';
 
         try {
@@ -217,15 +291,23 @@
             const data = await res.json();
 
             if (!res.ok) {
-                modalMessage.textContent = data.error || 'Booking failed.';
+                modalMessage.className = 'auth-error';
+                modalMessage.textContent = data.error || 'Request failed.';
                 modalMessage.style.display = 'block';
                 modalBookBtn.disabled = false;
-                modalBookBtn.textContent = 'Book Now';
+                modalBookBtn.textContent = isWaitlist ? 'Join Waitlist' : 'Book Now';
                 return;
             }
 
             modalMessage.className = 'auth-success';
-            modalMessage.textContent = 'Booking confirmed! Check your dashboard for details.';
+            if (data.waitlist) {
+                modalMessage.textContent = data.message || 'You have been added to the waitlist.';
+            } else {
+                modalMessage.textContent = 'Booking confirmed! Check your dashboard.';
+                if(navBalance && data.new_balance !== undefined) {
+                    navBalance.innerHTML = `<span>Balance: ${Number(data.new_balance).toFixed(2)} ETB</span>`;
+                }
+            }
             modalMessage.style.display = 'block';
 
             // Refresh events after a short delay
@@ -235,22 +317,73 @@
             }, 1500);
 
         } catch (err) {
+            modalMessage.className = 'auth-error';
             modalMessage.textContent = 'Network error. Please try again.';
             modalMessage.style.display = 'block';
             modalBookBtn.disabled = false;
-            modalBookBtn.textContent = 'Book Now';
+            modalBookBtn.textContent = isWaitlist ? 'Join Waitlist' : 'Book Now';
         }
     });
+
+    const modalSaveBtn = document.getElementById('modal-save-btn');
+    if (modalSaveBtn) {
+        modalSaveBtn.addEventListener('click', async () => {
+            if (!currentUser) {
+                window.location.href = 'auth.html';
+                return;
+            }
+            if (!selectedEventId) return;
+            const currentSaved = savedEventsIds.includes(selectedEventId);
+            const action = currentSaved ? 'unsave' : 'save';
+            modalSaveBtn.disabled = true;
+            try {
+                const res = await fetch(`${API_EVENTS}?action=${action}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ event_id: selectedEventId })
+                });
+                if(res.ok) {
+                    if (currentSaved) {
+                        savedEventsIds = savedEventsIds.filter(id => id !== selectedEventId);
+                    } else {
+                        savedEventsIds.push(selectedEventId);
+                    }
+                    const isNowSaved = savedEventsIds.includes(selectedEventId);
+                    modalSaveBtn.innerHTML = `<span>${isNowSaved ? 'Saved' : 'Save Event'}</span>`;
+                    if (isNowSaved) {
+                        modalSaveBtn.classList.remove('btn--outline');
+                        modalSaveBtn.classList.add('btn--primary');
+                    } else {
+                        modalSaveBtn.classList.add('btn--outline');
+                        modalSaveBtn.classList.remove('btn--primary');
+                    }
+                    const card = document.querySelector(`.event-card[data-id="${selectedEventId}"]`);
+                    if (card) {
+                        const saveBtn = card.querySelector('.btn-save');
+                        if (saveBtn) {
+                            saveBtn.style.color = isNowSaved ? 'var(--color-primary)' : '#aaa';
+                            saveBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="${isNowSaved ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2" style="width:1.5rem; height:1.5rem;"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg>`;
+                        }
+                    }
+                }
+            } catch(e) {
+            } finally {
+                modalSaveBtn.disabled = false;
+            }
+        });
+    }
 
     // ─── Filters ────────────────────────────────────────────
     function getFilterParams() {
         const params = {};
         const search   = filterSearch.value.trim();
+        const location = filterLocation ? filterLocation.value.trim() : '';
         const type     = filterType.value;
         const dateFrom = filterDateFrom.value;
         const dateTo   = filterDateTo.value;
 
         if (search)   params.search    = search;
+        if (location) params.location  = location;
         if (type)     params.type      = type;
         if (dateFrom) params.date_from = dateFrom;
         if (dateTo)   params.date_to   = dateTo;
@@ -262,6 +395,7 @@
 
     filterReset.addEventListener('click', () => {
         filterSearch.value   = '';
+        if(filterLocation) filterLocation.value = '';
         filterType.value     = '';
         filterType.dispatchEvent(new Event('change'));
         filterDateFrom.value = '';
@@ -273,12 +407,25 @@
     filterSearch.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') loadEvents(getFilterParams());
     });
+    if(filterLocation) {
+        filterLocation.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') loadEvents(getFilterParams());
+        });
+    }
 
     // ─── Utility ────────────────────────────────────────────
     function escapeHtml(str) {
+        if (!str) return '';
         const div = document.createElement('div');
         div.textContent = str;
         return div.innerHTML;
+    }
+
+    function parseSQLDate(sqlDate) {
+        if (!sqlDate) return new Date();
+        const isoStr = sqlDate.replace(' ', 'T');
+        const date = new Date(isoStr);
+        return isNaN(date.getTime()) ? new Date(sqlDate) : date;
     }
 
     // ─── Boot ───────────────────────────────────────────────

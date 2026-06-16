@@ -37,6 +37,7 @@
                 <span class="navbar__name">EventHub</span>
             </a>
             <div class="navbar__links">
+                <span id="nav-balance" class="nav-balance" style="margin-right: 1rem;"></span>
                 <span id="nav-user-name" class="navbar__greeting"></span>
                 <a href="index.html" class="btn btn--ghost btn--sm"><span>Browse Events</span></a>
                 <button id="nav-logout" class="btn btn--outline btn--sm"><span>Logout</span></button>
@@ -51,10 +52,23 @@
             <h1>Your Dashboard</h1>
         </header>
 
+        <!-- Profile Banner -->
+        <div id="dashboard-profile" class="dashboard-profile hidden" style="margin-bottom: var(--space-xl);">
+            <div class="dashboard-profile__user">
+                <h2 id="dashboard-welcome-name">Hi, User</h2>
+                <p id="dashboard-welcome-email">user@example.com</p>
+            </div>
+            <div class="dashboard-profile__balance">
+                <span class="balance-title">Account Balance</span>
+                <span class="balance-amount" id="dashboard-welcome-balance">0.00 ETB</span>
+            </div>
+        </div>
+
         <!-- ─── Tabs ───────────────────────────────────────── -->
         <div class="tabs" id="dashboard-tabs">
             <button class="tab active" data-tab="my-events">My Events</button>
             <button class="tab" data-tab="my-bookings">My Bookings</button>
+            <button class="tab" data-tab="saved-events">Saved Events</button>
         </div>
 
         <!-- ═══════ My Events Tab ═══════ -->
@@ -62,6 +76,46 @@
             <div class="tab-panel__header">
                 <h2>Events You Created</h2>
                 <button id="btn-new-event" class="btn btn--primary"><span>+ New Event</span></button>
+            </div>
+
+            <!-- Host Analytics Dashboard -->
+            <div id="host-analytics" class="host-analytics hidden">
+                <div class="analytics-card">
+                    <div class="analytics-card__icon">
+                        <svg class="svg-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                    </div>
+                    <div class="analytics-card__content">
+                        <span class="analytics-card__value" id="stats-events-count">0</span>
+                        <span class="analytics-card__label">Total Events</span>
+                    </div>
+                </div>
+                <div class="analytics-card">
+                    <div class="analytics-card__icon">
+                        <svg class="svg-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                    </div>
+                    <div class="analytics-card__content">
+                        <span class="analytics-card__value" id="stats-tickets-sold">0</span>
+                        <span class="analytics-card__label">Tickets Sold</span>
+                    </div>
+                </div>
+                <div class="analytics-card">
+                    <div class="analytics-card__icon">
+                        <svg class="svg-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+                    </div>
+                    <div class="analytics-card__content">
+                        <span class="analytics-card__value" id="stats-revenue">0.00 ETB</span>
+                        <span class="analytics-card__label">Total Revenue</span>
+                    </div>
+                </div>
+                <div class="analytics-card">
+                    <div class="analytics-card__icon">
+                        <svg class="svg-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                    </div>
+                    <div class="analytics-card__content">
+                        <span class="analytics-card__value" id="stats-occupancy">0%</span>
+                        <span class="analytics-card__label">Occupancy Rate</span>
+                    </div>
+                </div>
             </div>
 
             <div id="my-events-list" class="my-events-list">
@@ -95,6 +149,22 @@
                     </svg>
                 </div>
                 <p class="empty-state__text">You haven't booked any events yet. <a href="index.html" class="link">Browse events</a></p>
+            </div>
+        </section>
+
+        <!-- ═══════ Saved Events Tab ═══════ -->
+        <section id="tab-saved-events" class="tab-panel hidden">
+            <h2>Saved Events</h2>
+            <div id="saved-events-list" class="saved-events-list events-grid">
+                <!-- Dynamically populated -->
+            </div>
+            <div id="saved-events-empty" class="empty-state hidden">
+                <div class="empty-state__icon" style="display:flex; justify-content:center; margin-bottom:1.5rem;">
+                    <svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" style="width:3rem; height:3rem; color:var(--color-primary);">
+                        <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
+                    </svg>
+                </div>
+                <p class="empty-state__text">You haven't saved any events yet. <a href="index.html" class="link">Browse events</a></p>
             </div>
         </section>
     </main>
@@ -140,6 +210,16 @@
                         <input type="number" id="event-form-seats" class="input" min="1" placeholder="e.g. 100" required>
                     </div>
                 </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="event-form-location">Location</label>
+                        <input type="text" id="event-form-location" class="input" placeholder="e.g. Online or 123 Street" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="event-form-price">Ticket Price (Birr)</label>
+                        <input type="number" id="event-form-price" class="input" min="0" step="0.01" placeholder="e.g. 150.00" required>
+                    </div>
+                </div>
                 <div class="form-group">
                     <label for="event-form-desc">Description</label>
                     <textarea id="event-form-desc" class="input input--textarea" rows="4" placeholder="Describe your event…"></textarea>
@@ -165,6 +245,21 @@
         </div>
     </div>
 
+    <!-- ─── Host Tools (Attendees) Modal ───────────────────── -->
+    <div id="attendees-modal" class="modal hidden">
+        <div class="modal__backdrop" id="attendees-backdrop"></div>
+        <div class="modal__content modal__content--wide">
+            <button class="modal__close" id="attendees-close">&times;</button>
+            <h2 class="modal__title">Manage Attendees</h2>
+            <div id="attendees-list" class="attendees-list" style="margin-top:1rem;">
+                <!-- Dynamically populated -->
+            </div>
+            <div id="attendees-empty" class="empty-state hidden">
+                <p>No active bookings yet.</p>
+            </div>
+        </div>
+    </div>
+
     <!-- ─── Footer ─────────────────────────────────────────── -->
     <footer class="footer">
         <div class="container">
@@ -173,6 +268,6 @@
     </footer>
 
     <script src="js/p3r-dropdown.js"></script>
-    <script src="js/dashboard.js"></script>
+    <script src="js/dashboard.js?v=1.0.1"></script>
 </body>
 </html>

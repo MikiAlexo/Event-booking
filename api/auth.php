@@ -48,12 +48,14 @@ switch ($action) {
             exit;
         }
 
-        $pdo = getDBConnection();
+        $mysqli = getDBConnection();
 
         // Check for existing email
-        $stmt = $pdo->prepare('SELECT id FROM users WHERE email = ?');
-        $stmt->execute([$email]);
-        if ($stmt->fetch()) {
+        $stmt = $mysqli->prepare('SELECT id FROM users WHERE email = ?');
+        $stmt->bind_param('s', $email);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        if ($result->fetch_assoc()) {
             http_response_code(409);
             echo json_encode(['error' => 'An account with this email already exists.']);
             exit;
@@ -61,15 +63,17 @@ switch ($action) {
 
         // Hash password and insert
         $hash = password_hash($password, PASSWORD_BCRYPT);
-        $stmt = $pdo->prepare('INSERT INTO users (email, password_hash, full_name) VALUES (?, ?, ?)');
-        $stmt->execute([$email, $hash, $fullName]);
+        $stmt = $mysqli->prepare('INSERT INTO users (email, password_hash, full_name, balance) VALUES (?, ?, ?, 1000.00)');
+        $stmt->bind_param('sss', $email, $hash, $fullName);
+        $stmt->execute();
 
-        $userId = (int) $pdo->lastInsertId();
+        $userId = (int) $mysqli->insert_id;
 
         // Set session
         $_SESSION['user_id']   = $userId;
         $_SESSION['user_name'] = $fullName;
         $_SESSION['user_email'] = $email;
+        $_SESSION['user_balance'] = 1000.00;
 
         echo json_encode([
             'success' => true,
@@ -77,6 +81,7 @@ switch ($action) {
                 'id'        => $userId,
                 'full_name' => $fullName,
                 'email'     => $email,
+                'balance'   => 1000.00,
             ],
         ]);
         break;
@@ -99,10 +104,12 @@ switch ($action) {
             exit;
         }
 
-        $pdo  = getDBConnection();
-        $stmt = $pdo->prepare('SELECT id, email, password_hash, full_name FROM users WHERE email = ?');
-        $stmt->execute([$email]);
-        $user = $stmt->fetch();
+        $mysqli  = getDBConnection();
+        $stmt = $mysqli->prepare('SELECT id, email, password_hash, full_name, balance FROM users WHERE email = ?');
+        $stmt->bind_param('s', $email);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $user = $result->fetch_assoc();
 
         if (!$user || !password_verify($password, $user['password_hash'])) {
             http_response_code(401);
@@ -114,6 +121,7 @@ switch ($action) {
         $_SESSION['user_id']    = (int) $user['id'];
         $_SESSION['user_name']  = $user['full_name'];
         $_SESSION['user_email'] = $user['email'];
+        $_SESSION['user_balance'] = (float) $user['balance'];
 
         echo json_encode([
             'success' => true,
@@ -121,6 +129,7 @@ switch ($action) {
                 'id'        => (int) $user['id'],
                 'full_name' => $user['full_name'],
                 'email'     => $user['email'],
+                'balance'   => (float) $user['balance'],
             ],
         ]);
         break;
@@ -144,12 +153,23 @@ switch ($action) {
     // ─── Session Check ──────────────────────────────────────
     case 'check':
         if (isset($_SESSION['user_id'])) {
+            // Re-fetch balance to ensure it's up to date
+            $mysqli = getDBConnection();
+            $stmt = $mysqli->prepare('SELECT balance FROM users WHERE id = ?');
+            $stmt->bind_param('i', $_SESSION['user_id']);
+            $stmt->execute();
+            $result = $stmt->get_result();
+            if ($row = $result->fetch_assoc()) {
+                $_SESSION['user_balance'] = (float) $row['balance'];
+            }
+
             echo json_encode([
                 'logged_in' => true,
                 'user'      => [
                     'id'        => $_SESSION['user_id'],
                     'full_name' => $_SESSION['user_name'],
                     'email'     => $_SESSION['user_email'],
+                    'balance'   => $_SESSION['user_balance'] ?? 0.00,
                 ],
             ]);
         } else {

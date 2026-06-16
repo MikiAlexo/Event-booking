@@ -1,6 +1,6 @@
 <?php
 /**
- * Database Connection - PDO Configuration
+ * Database Connection - MySQLi Configuration
  * Configured for standard WAMP Server setup.
  */
 
@@ -12,31 +12,26 @@ define('DB_USER', 'root');
 define('DB_PASS', '');
 
 /**
- * Returns a singleton PDO connection instance.
+ * Returns a singleton mysqli connection instance.
  *
- * @return PDO
+ * @return mysqli
  */
-function getDBConnection(): PDO
+function getDBConnection(): mysqli
 {
-    static $pdo = null;
+    static $mysqli = null;
 
-    if ($pdo === null) {
-        $dsn = 'mysql:host=' . DB_HOST . ';port=' . DB_PORT . ';dbname=' . DB_NAME . ';charset=utf8mb4';
-
-        $options = [
-            PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
-            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-            PDO::ATTR_EMULATE_PREPARES   => false,
-        ];
-
+    if ($mysqli === null) {
+        mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
+        
         try {
-            $pdo = new PDO($dsn, DB_USER, DB_PASS, $options);
-        } catch (PDOException $e) {
+            $mysqli = new mysqli(DB_HOST, DB_USER, DB_PASS, DB_NAME, DB_PORT);
+            $mysqli->set_charset('utf8mb4');
+        } catch (mysqli_sql_exception $e) {
             http_response_code(500);
             echo json_encode(['error' => 'Database connection failed: ' . $e->getMessage()]);
             exit;
         }
     }
 
-    return $pdo;
+    return $mysqli;
 }

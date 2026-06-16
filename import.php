@@ -2,20 +2,19 @@
 $host = '127.0.0.1';
 $user = 'root';
 $pass = '';
-$dbname = 'event_booking'; // Change this if your db name in api/db.php is different
+$dbname = 'event_booking_system';
 
 try {
     // 1. Connect to MySQL server (without DB)
-    $pdo = new PDO("mysql:host=$host", $user, $pass);
-    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+    mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
+    $mysqli = new mysqli($host, $user, $pass);
 
     // 2. Create Database
-    $pdo->exec("CREATE DATABASE IF NOT EXISTS `$dbname` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;");
+    $mysqli->query("CREATE DATABASE IF NOT EXISTS `$dbname` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;");
     echo "Database '$dbname' created or already exists.<br>";
 
     // 3. Connect to the created Database
-    $pdo = new PDO("mysql:host=$host;dbname=$dbname", $user, $pass);
-    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+    $mysqli->select_db($dbname);
 
     // 4. Read and Execute schema.sql
     $sqlPath = __DIR__ . '/schema.sql';
@@ -26,10 +25,17 @@ try {
     $sql = file_get_contents($sqlPath);
     
     // Execute the schema
-    $pdo->exec($sql);
+    if ($mysqli->multi_query($sql)) {
+        do {
+            if ($result = $mysqli->store_result()) {
+                $result->free();
+            }
+        } while ($mysqli->more_results() && $mysqli->next_result());
+    }
+    
     echo "<strong>Success!</strong> schema.sql has been imported.<br>";
     echo "You can now delete this import.php file and go to your website to log in.";
 
-} catch (PDOException $e) {
+} catch (mysqli_sql_exception $e) {
     die("Database Error: " . $e->getMessage());
 }

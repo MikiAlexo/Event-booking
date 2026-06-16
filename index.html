@@ -43,6 +43,7 @@
                 </div>
                 <!-- Logged-in links -->
                 <div id="nav-user" class="hidden">
+                    <span id="nav-balance" class="nav-balance" style="margin-right: 1rem;"></span>
                     <a href="dashboard.html" class="btn btn--ghost btn--sm"><span>Dashboard</span></a>
                     <button id="nav-logout" class="btn btn--outline btn--sm"><span>Logout</span></button>
                 </div>
@@ -61,8 +62,9 @@
     <!-- ─── Filters ────────────────────────────────────────── -->
     <section class="filters container" id="filters-section">
         <div class="filters__bar">
-            <div class="filters__search">
-                <input type="text" id="filter-search" placeholder="Search events…" class="input">
+            <div class="filters__search" style="display:flex; gap:0.5rem; flex:1;">
+                <input type="text" id="filter-search" placeholder="Search events…" class="input" style="flex:1;">
+                <input type="text" id="filter-location" placeholder="Location…" class="input" style="max-width: 150px;">
             </div>
             <div class="filters__group">
                 <select id="filter-type" class="input">
@@ -109,9 +111,13 @@
             <button class="modal__close" id="modal-close">&times;</button>
             <div class="modal__badge" id="modal-type"></div>
             <h2 class="modal__title" id="modal-title"></h2>
-            <div class="modal__meta">
+            <div class="modal__meta" style="margin-bottom:0.5rem;">
                 <span id="modal-date"></span>
                 <span id="modal-host"></span>
+            </div>
+            <div class="modal__meta" style="margin-bottom:1rem; font-weight: 600; color: var(--color-primary);">
+                <span id="modal-location" style="margin-right:1rem;"></span>
+                <span id="modal-price"></span>
             </div>
             <p class="modal__desc" id="modal-desc"></p>
             <div class="modal__seats">
@@ -120,8 +126,9 @@
                 </div>
                 <span id="modal-seats-text"></span>
             </div>
-            <div class="modal__actions">
+            <div class="modal__actions" style="display: flex; gap: 0.75rem;">
                 <button id="modal-book-btn" class="btn btn--primary"><span>Book Now</span></button>
+                <button id="modal-save-btn" class="btn btn--outline"><span>Save Event</span></button>
             </div>
             <div id="modal-message" class="auth-error" style="display:none;"></div>
         </div>
@@ -135,6 +142,6 @@
     </footer>
 
     <script src="js/p3r-dropdown.js"></script>
-    <script src="js/events.js"></script>
+    <script src="js/events.js?v=1.0.1"></script>
 </body>
 </html>
