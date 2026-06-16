@@ -584,17 +584,15 @@
         const seatsClass = ev.available_seats <= 0 ? 'sold-out' : (pct >= 80 ? 'almost-full' : '');
         const price = Number(ev.ticket_price) > 0 ? `${Number(ev.ticket_price).toFixed(2)} ETB` : 'FREE';
 
+        // Saved cards start in the Saved state: Stub hidden, Stamp visible
         card.innerHTML = `
             <div class="event-card__date-badge">
                 <span class="event-card__month">${month}</span>
                 <span class="event-card__day">${day}</span>
             </div>
             <div class="event-card__body">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 0.5rem;">
+                <div style="margin-bottom: 0.5rem;">
                     <span class="event-card__type">${escapeHtml(ev.event_type)}</span>
-                    <button class="btn btn--icon btn-unsave" title="Unsave Event" style="background:transparent; border:none; cursor:pointer; color: var(--color-primary);">
-                        <svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" style="width:1.5rem; height:1.5rem;"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg>
-                    </button>
                 </div>
                 <h3 class="event-card__title">${escapeHtml(ev.title)}</h3>
                 <p class="event-card__time">${time} • ${escapeHtml(ev.location || 'Online')}</p>
@@ -603,9 +601,23 @@
                     <span class="event-card__seats ${seatsClass}">${ev.available_seats <= 0 ? 'Waitlist Available' : ev.available_seats + ' seats left'}</span>
                 </div>
             </div>
+            <div class="ticket-stub hidden-stub" title="Save Event">
+                <div class="ticket-stub__content">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="0"></rect><path d="M3 10a2 2 0 0 1 0 4M21 10a2 2 0 0 0 0 4"></path></svg>
+                    <span class="ticket-stub__text">KEEP</span>
+                </div>
+            </div>
+            <div class="ticket-stamp" title="Unsave Event">
+                <div class="ticket-stamp__content">
+                    <span class="ticket-stamp__text">KEPT</span>
+                </div>
+            </div>
         `;
 
-        card.querySelector('.btn-unsave').addEventListener('click', async (e) => {
+        const stubElement = card.querySelector('.ticket-stub');
+        const stampElement = card.querySelector('.ticket-stamp');
+
+        stampElement.addEventListener('click', async (e) => {
             e.stopPropagation();
             try {
                 const res = await fetch(`${API_EVENTS}?action=unsave`, {
@@ -614,7 +626,18 @@
                     body: JSON.stringify({ event_id: ev.id })
                 });
                 if(res.ok) {
-                    loadSavedEvents();
+                    // Flash the card border
+                    card.classList.add('flash-active');
+                    
+                    // Animate stamp going away and ticket stub sliding back up
+                    stampElement.classList.add('hidden-stub');
+                    stubElement.classList.remove('hidden-stub');
+                    stubElement.classList.add('restoring');
+                    
+                    // Wait for the animation before reloading list
+                    setTimeout(() => {
+                        loadSavedEvents();
+                    }, 300);
                 }
             } catch(e) {}
         });

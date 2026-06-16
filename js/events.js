@@ -149,11 +149,8 @@
                 <span class="event-card__day">${day}</span>
             </div>
             <div class="event-card__body">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 0.5rem;">
+                <div style="margin-bottom: 0.5rem;">
                     <span class="event-card__type">${escapeHtml(ev.event_type)}</span>
-                    <button class="btn btn--icon btn-save" title="${isSaved ? 'Unsave Event' : 'Save Event'}" style="background:transparent; border:none; cursor:pointer; color: ${isSaved ? 'var(--color-primary)' : '#aaa'};">
-                        <svg viewBox="0 0 24 24" fill="${isSaved ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2" style="width:1.5rem; height:1.5rem;"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg>
-                    </button>
                 </div>
                 <h3 class="event-card__title">${escapeHtml(ev.title)}</h3>
                 <p class="event-card__time">${time} • ${escapeHtml(ev.location || 'Online')}</p>
@@ -166,35 +163,88 @@
                     <button class="btn btn--sm btn--primary event-card__view-btn"><span>View</span></button>
                 </div>
             </div>
+            <div class="ticket-stub ${isSaved ? 'hidden-stub' : ''}" title="Save Event">
+                <div class="ticket-stub__content">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="0"></rect><path d="M3 10a2 2 0 0 1 0 4M21 10a2 2 0 0 0 0 4"></path></svg>
+                    <span class="ticket-stub__text">KEEP</span>
+                </div>
+            </div>
+            <div class="ticket-stamp ${isSaved ? '' : 'hidden-stub'}" title="Unsave Event">
+                <div class="ticket-stamp__content">
+                    <span class="ticket-stamp__text">KEPT</span>
+                </div>
+            </div>
         `;
 
         card.querySelector('.event-card__view-btn').addEventListener('click', () => openModal(ev));
         
-        const saveBtn = card.querySelector('.btn-save');
-        saveBtn.addEventListener('click', async (e) => {
+        const stubElement = card.querySelector('.ticket-stub');
+        const stampElement = card.querySelector('.ticket-stamp');
+
+        // Ticket Rip Click Handler
+        stubElement.addEventListener('click', async (e) => {
             e.stopPropagation();
             if (!currentUser) {
                 window.location.href = 'auth.html';
                 return;
             }
-            const currentSaved = savedEventsIds.includes(ev.id);
-            const action = currentSaved ? 'unsave' : 'save';
             try {
-                const res = await fetch(`${API_EVENTS}?action=${action}`, {
+                const res = await fetch(`${API_EVENTS}?action=save`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ event_id: ev.id })
                 });
                 if(res.ok) {
-                    if (currentSaved) {
-                        savedEventsIds = savedEventsIds.filter(id => id !== ev.id);
-                        saveBtn.style.color = '#aaa';
-                        saveBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:1.5rem; height:1.5rem;"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg>`;
-                    } else {
+                    if (!savedEventsIds.includes(ev.id)) {
                         savedEventsIds.push(ev.id);
-                        saveBtn.style.color = 'var(--color-primary)';
-                        saveBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" style="width:1.5rem; height:1.5rem;"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg>`;
                     }
+                    updateModalStateIfSelected(ev.id, true);
+
+                    stubElement.classList.add('ripping');
+                    setTimeout(() => {
+                        stubElement.classList.remove('ripping');
+                        stubElement.classList.add('hidden-stub');
+                        
+                        stampElement.classList.remove('hidden-stub');
+                        stampElement.classList.add('entering');
+                        
+                        setTimeout(() => {
+                            stampElement.classList.remove('entering');
+                        }, 150);
+                    }, 250);
+                }
+            } catch(e) {}
+        });
+
+        // Ticket Stamp Unsave Handler
+        stampElement.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            if (!currentUser) {
+                window.location.href = 'auth.html';
+                return;
+            }
+            try {
+                const res = await fetch(`${API_EVENTS}?action=unsave`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ event_id: ev.id })
+                });
+                if(res.ok) {
+                    savedEventsIds = savedEventsIds.filter(id => id !== ev.id);
+                    updateModalStateIfSelected(ev.id, false);
+
+                    card.classList.add('flash-active');
+                    setTimeout(() => {
+                        card.classList.remove('flash-active');
+                    }, 300);
+
+                    stampElement.classList.add('hidden-stub');
+                    stubElement.classList.remove('hidden-stub');
+                    stubElement.classList.add('restoring');
+                    
+                    setTimeout(() => {
+                        stubElement.classList.remove('restoring');
+                    }, 300);
                 }
             } catch(e) {}
         });
@@ -325,6 +375,19 @@
         }
     });
 
+    function updateModalStateIfSelected(eventId, isSaved) {
+        if (selectedEventId === eventId && modalSaveBtn) {
+            modalSaveBtn.innerHTML = `<span>${isSaved ? 'Saved' : 'Save Event'}</span>`;
+            if (isSaved) {
+                modalSaveBtn.classList.remove('btn--outline');
+                modalSaveBtn.classList.add('btn--primary');
+            } else {
+                modalSaveBtn.classList.add('btn--outline');
+                modalSaveBtn.classList.remove('btn--primary');
+            }
+        }
+    }
+
     const modalSaveBtn = document.getElementById('modal-save-btn');
     if (modalSaveBtn) {
         modalSaveBtn.addEventListener('click', async () => {
@@ -357,12 +420,19 @@
                         modalSaveBtn.classList.add('btn--outline');
                         modalSaveBtn.classList.remove('btn--primary');
                     }
+                    
                     const card = document.querySelector(`.event-card[data-id="${selectedEventId}"]`);
                     if (card) {
-                        const saveBtn = card.querySelector('.btn-save');
-                        if (saveBtn) {
-                            saveBtn.style.color = isNowSaved ? 'var(--color-primary)' : '#aaa';
-                            saveBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="${isNowSaved ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2" style="width:1.5rem; height:1.5rem;"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg>`;
+                        const stubElement = card.querySelector('.ticket-stub');
+                        const stampElement = card.querySelector('.ticket-stamp');
+                        if (stubElement && stampElement) {
+                            if (isNowSaved) {
+                                stubElement.classList.add('hidden-stub');
+                                stampElement.classList.remove('hidden-stub');
+                            } else {
+                                stampElement.classList.add('hidden-stub');
+                                stubElement.classList.remove('hidden-stub');
+                            }
                         }
                     }
                 }

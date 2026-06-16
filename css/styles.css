@@ -802,9 +802,12 @@ select.input {
     border: 2px solid var(--color-border);
     border-radius: var(--radius-sm);
     overflow: visible;
-    transition: all var(--transition-base);
+    transition: border-color var(--transition-base), transform var(--transition-base), box-shadow var(--transition-base);
     position: relative;
     margin-bottom: 10px;
+    display: flex;
+    flex-direction: row;
+    align-items: stretch;
 }
 
 /* Dual Layered Outline Offset Effect on Hover */
@@ -844,7 +847,7 @@ select.input {
     padding: var(--space-sm) var(--space-md);
     position: absolute;
     top: -12px;
-    right: 15px;
+    right: 75px;
     transform: skewX(-15deg);
     min-width: 60px;
     box-shadow: var(--shadow-md);
@@ -872,6 +875,173 @@ select.input {
     padding: var(--space-lg);
     position: relative;
     overflow: hidden;
+    flex: 1;
+    min-width: 0;
+}
+
+/* Custom P3R Ticket Rip CSS Classes */
+.ticket-stub {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 60px;
+    min-width: 60px;
+    flex-shrink: 0;
+    background: #050F1A;
+    border-left: 2px dashed #00E5FF;
+    border-radius: 0 !important;
+    cursor: pointer;
+    position: relative;
+    user-select: none;
+    transform: skewX(0deg);
+    opacity: 1;
+    transition: background 0.2s ease, transform 0.25s cubic-bezier(0.25, 0.8, 0.25, 1), opacity 0.25s ease;
+    overflow: hidden;
+    z-index: 5;
+    transform-origin: top center;
+}
+
+.ticket-stub__content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    color: #00E5FF;
+    transition: text-shadow 0.2s ease, color 0.2s ease;
+}
+
+.ticket-stub__content svg {
+    width: 1.2rem;
+    height: 1.2rem;
+}
+
+.ticket-stub__text {
+    font-family: var(--font-heading);
+    font-size: 0.65rem;
+    font-weight: 800;
+    font-style: italic;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+/* Hover State: Diagonal Cyan/Navy Stripe Pattern & Glow */
+.ticket-stub:hover {
+    background: repeating-linear-gradient(
+        45deg,
+        #050F1A,
+        #050F1A 8px,
+        rgba(0, 229, 255, 0.18) 8px,
+        rgba(0, 229, 255, 0.18) 16px
+    );
+}
+
+.ticket-stub:hover .ticket-stub__content {
+    color: #ffffff;
+    text-shadow: 0 0 8px #00E5FF, 0 0 15px #00E5FF;
+}
+
+/* State B: Ripping animation */
+.ticket-stub.ripping {
+    transform: translateY(40px) rotate(5deg);
+    opacity: 0;
+    pointer-events: none;
+}
+
+/* State C: Permanent flat neon cyan stamp directly on right edge */
+.ticket-stamp {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 60px;
+    min-width: 60px;
+    flex-shrink: 0;
+    background: #00E5FF;
+    border-radius: 0 !important;
+    cursor: pointer;
+    position: relative;
+    user-select: none;
+    z-index: 5;
+    transition: background 0.2s ease;
+}
+
+.ticket-stamp__content {
+    color: #050F1A;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.ticket-stamp__text {
+    font-family: var(--font-stylized);
+    font-size: 0.7rem;
+    font-weight: 900;
+    font-style: italic;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: #050F1A;
+    border: 2px solid #050F1A;
+    padding: 3px 5px;
+    line-height: 1;
+    white-space: nowrap;
+}
+
+.ticket-stamp:hover {
+    background: #00ffd0; /* Neon mint on hover */
+}
+
+/* Animation for returning stub */
+.ticket-stub.restoring {
+    animation: ticket-restore 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+@keyframes ticket-restore {
+    0% {
+        transform: translateY(40px) rotate(5deg);
+        opacity: 0;
+    }
+    100% {
+        transform: translateY(0) rotate(0deg);
+        opacity: 1;
+    }
+}
+
+/* Flash animation for main card */
+.event-card.flash-active {
+    animation: card-flash 0.3s ease;
+}
+
+@keyframes card-flash {
+    0%, 100% {
+        border-color: var(--color-border);
+        box-shadow: none;
+    }
+    50% {
+        border-color: #00E5FF;
+        box-shadow: 0 0 15px rgba(0, 229, 255, 0.6);
+    }
+}
+
+/* For stamp entry animation */
+.ticket-stamp.entering {
+    animation: stamp-enter 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+@keyframes stamp-enter {
+    0% {
+        transform: scale(1.5);
+        opacity: 0;
+    }
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+/* Hide helper class */
+.hidden-stub {
+    display: none !important;
 }
 
 /* Type Label - Slanted pill */
@@ -1449,6 +1619,18 @@ select.input {
     .tabs {
         overflow-x: auto;
         white-space: nowrap;
+    }
+
+    /* Ticket stub responsive scaling */
+    .ticket-stub, .ticket-stamp {
+        width: 48px;
+    }
+    .ticket-stub__text {
+        font-size: 0.55rem;
+    }
+    .ticket-stamp__text {
+        font-size: 0.65rem;
+        padding: 1px 2px;
     }
 }
 
