@@ -37,6 +37,7 @@ CREATE TABLE IF NOT EXISTS events (
     ticket_price DECIMAL(10,2) NOT NULL DEFAULT 0.00,
     total_seats INT NOT NULL DEFAULT 0,
     available_seats INT NOT NULL DEFAULT 0,
+    image_path VARCHAR(255) DEFAULT NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     INDEX idx_events_date (event_date),

@@ -13,6 +13,17 @@ require_once __DIR__ . '/db.php';
 
 $method = $_SERVER['REQUEST_METHOD'];
 $action = $_GET['action'] ?? '';
+
+$contentType = $_SERVER['CONTENT_TYPE'] ?? $_SERVER['HTTP_CONTENT_TYPE'] ?? '';
+$isJson = (strpos(strtolower($contentType), 'application/json') !== false);
+
+if ($method === 'POST' && !$isJson && isset($_POST['_method'])) {
+    $overrideMethod = strtoupper($_POST['_method']);
+    if ($overrideMethod === 'PUT' || $overrideMethod === 'DELETE') {
+        $method = $overrideMethod;
+    }
+}
+
 $mysqli = getDBConnection();
 
 /**
@@ -26,6 +37,79 @@ function requireAuth(): int
         exit;
     }
     return (int) $_SESSION['user_id'];
+}
+
+/**
+ * Validate and save uploaded image.
+ * Returns relative path on success, or exits with error response.
+ */
+function handleImageUpload(): ?string
+{
+    if (!isset($_FILES['event_image']) || $_FILES['event_image']['error'] === UPLOAD_ERR_NO_FILE) {
+        return null;
+    }
+
+    $file = $_FILES['event_image'];
+
+    if ($file['error'] !== UPLOAD_ERR_OK) {
+        http_response_code(400);
+        echo json_encode(['error' => 'File upload error code: ' . $file['error']]);
+        exit;
+    }
+
+    // Check size (5MB max)
+    if ($file['size'] > 5 * 1024 * 1024) {
+        http_response_code(400);
+        echo json_encode(['error' => 'File size exceeds 5MB limit.']);
+        exit;
+    }
+
+    // Check extension
+    $extension = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+    $allowedExts = ['jpg', 'jpeg', 'png', 'webp'];
+    if (!in_array($extension, $allowedExts)) {
+        http_response_code(400);
+        echo json_encode(['error' => 'Invalid file extension. Only JPG, JPEG, PNG, and WEBP are allowed.']);
+        exit;
+    }
+
+    // Check MIME type using mime_content_type
+    $mimeType = mime_content_type($file['tmp_name']);
+    $allowedMimes = ['image/jpeg', 'image/png', 'image/webp'];
+    if (!in_array($mimeType, $allowedMimes)) {
+        http_response_code(400);
+        echo json_encode(['error' => 'Invalid file type. Only JPG, JPEG, PNG, and WEBP images are allowed.']);
+        exit;
+    }
+
+    // Create uploads folder if not exists
+    $uploadDir = __DIR__ . '/../uploads';
+    if (!is_dir($uploadDir)) {
+        if (!mkdir($uploadDir, 0755, true)) {
+            http_response_code(500);
+            echo json_encode(['error' => 'Failed to create uploads directory.']);
+            exit;
+        }
+    }
+
+    // Generate unique safe name
+    try {
+        $filename = bin2hex(random_bytes(16)) . '.' . $extension;
+    } catch (Exception $e) {
+        $filename = uniqid('img_', true) . '.' . $extension;
+    }
+
+    // Ensure we don't have directory traversal in the name
+    $filename = basename($filename);
+    $targetPath = $uploadDir . '/' . $filename;
+
+    if (!move_uploaded_file($file['tmp_name'], $targetPath)) {
+        http_response_code(500);
+        echo json_encode(['error' => 'Failed to save uploaded file.']);
+        exit;
+    }
+
+    return 'uploads/' . $filename;
 }
 
 // ─────────────────────────────────────────────────────────
@@ -184,7 +268,12 @@ if ($method === 'GET') {
 // POST - Create a new event
 if ($method === 'POST') {
     $userId = requireAuth();
-    $data   = json_decode(file_get_contents('php://input'), true);
+    
+    if ($isJson) {
+        $data = json_decode(file_get_contents('php://input'), true);
+    } else {
+        $data = $_POST;
+    }
 
     $title       = trim($data['title'] ?? '');
     $description = trim($data['description'] ?? '');
@@ -200,11 +289,14 @@ if ($method === 'POST') {
         exit;
     }
 
+    // Process image upload
+    $imagePath = handleImageUpload();
+
     $stmt = $mysqli->prepare('
-        INSERT INTO events (creator_id, title, description, event_date, event_type, location, ticket_price, total_seats, available_seats)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO events (creator_id, title, description, event_date, event_type, location, ticket_price, total_seats, available_seats, image_path)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ');
-    $stmt->bind_param('isssssdii', $userId, $title, $description, $eventDate, $eventType, $location, $ticketPrice, $totalSeats, $totalSeats);
+    $stmt->bind_param('isssssdiis', $userId, $title, $description, $eventDate, $eventType, $location, $ticketPrice, $totalSeats, $totalSeats, $imagePath);
     $stmt->execute();
 
     $newId = (int) $mysqli->insert_id;
@@ -222,6 +314,7 @@ if ($method === 'POST') {
             'ticket_price'    => $ticketPrice,
             'total_seats'     => $totalSeats,
             'available_seats' => $totalSeats,
+            'image_path'      => $imagePath,
         ],
     ]);
     exit;
@@ -230,7 +323,12 @@ if ($method === 'POST') {
 // PUT - Update an existing event (only by its creator)
 if ($method === 'PUT') {
     $userId = requireAuth();
-    $data   = json_decode(file_get_contents('php://input'), true);
+    
+    if ($isJson) {
+        $data = json_decode(file_get_contents('php://input'), true);
+    } else {
+        $data = $_POST;
+    }
 
     $eventId     = (int) ($data['id'] ?? 0);
     $title       = trim($data['title'] ?? '');
@@ -247,8 +345,8 @@ if ($method === 'PUT') {
         exit;
     }
 
-    // Verify ownership
-    $stmt = $mysqli->prepare('SELECT creator_id, total_seats, available_seats FROM events WHERE id = ?');
+    // Verify ownership and get current image_path
+    $stmt = $mysqli->prepare('SELECT creator_id, total_seats, available_seats, image_path FROM events WHERE id = ?');
     $stmt->bind_param('i', $eventId);
     $stmt->execute();
     $result = $stmt->get_result();
@@ -266,16 +364,30 @@ if ($method === 'PUT') {
         exit;
     }
 
+    // Process image upload
+    $imagePath = $event['image_path'];
+    $newUploadedPath = handleImageUpload();
+    if ($newUploadedPath !== null) {
+        $imagePath = $newUploadedPath;
+        // Clean up old image if there was one
+        if (!empty($event['image_path'])) {
+            $oldFile = __DIR__ . '/../' . $event['image_path'];
+            if (file_exists($oldFile) && is_file($oldFile)) {
+                @unlink($oldFile);
+            }
+        }
+    }
+
     // Recalculate available seats proportionally
     $bookedSeats    = (int) $event['total_seats'] - (int) $event['available_seats'];
     $newAvailable   = max(0, $totalSeats - $bookedSeats);
 
     $stmt = $mysqli->prepare('
         UPDATE events
-        SET title = ?, description = ?, event_date = ?, event_type = ?, location = ?, ticket_price = ?, total_seats = ?, available_seats = ?
+        SET title = ?, description = ?, event_date = ?, event_type = ?, location = ?, ticket_price = ?, total_seats = ?, available_seats = ?, image_path = ?
         WHERE id = ?
     ');
-    $stmt->bind_param('sssssdiii', $title, $description, $eventDate, $eventType, $location, $ticketPrice, $totalSeats, $newAvailable, $eventId);
+    $stmt->bind_param('sssssdiiis', $title, $description, $eventDate, $eventType, $location, $ticketPrice, $totalSeats, $newAvailable, $imagePath, $eventId);
     $stmt->execute();
 
     echo json_encode(['success' => true]);

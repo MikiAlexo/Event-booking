@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Manage your events and bookings on EventHub.">
     <title>Dashboard — EventHub</title>
-    <link rel="stylesheet" href="css/styles.css?v=p3r-2">
+    <link rel="stylesheet" href="css/styles.css?v=p3r-3">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -224,6 +224,13 @@
                     <label for="event-form-desc">Description</label>
                     <textarea id="event-form-desc" class="input input--textarea" rows="4" placeholder="Describe your event…"></textarea>
                 </div>
+                <div class="form-group">
+                    <label for="eventImage">Event Image</label>
+                    <div id="event-form-image-preview-container" class="event-form__preview-container" style="display:none; margin-bottom:1rem; border:1px solid #00E5FF; width:100%; height:150px; overflow:hidden; position:relative; background:#050F1A;">
+                        <img id="event-form-image-preview" src="" alt="Preview" style="width:100%; height:100%; object-fit:cover;">
+                    </div>
+                    <input type="file" id="eventImage" name="event_image" accept="image/*" class="p3r-input">
+                </div>
                 <div class="form-actions">
                     <button type="button" id="event-form-cancel" class="btn btn--ghost"><span>Cancel</span></button>
                     <button type="submit" id="event-form-submit" class="btn btn--primary" data-label="Save Event"><span>Save Event</span></button>
@@ -268,6 +275,6 @@
     </footer>
 
     <script src="js/p3r-dropdown.js"></script>
-    <script src="js/dashboard.js?v=1.0.2"></script>
+    <script src="js/dashboard.js?v=1.0.3"></script>
 </body>
 </html>

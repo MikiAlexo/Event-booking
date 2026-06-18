@@ -37,6 +37,8 @@
     const modalSeatsText = document.getElementById('modal-seats-text');
     const modalBookBtn   = document.getElementById('modal-book-btn');
     const modalMessage   = document.getElementById('modal-message');
+    const modalImageContainer = document.getElementById('modal-image-container');
+    const modalImage     = document.getElementById('modal-image');
 
     // Nav auth elements
     const navGuest   = document.getElementById('nav-guest');
@@ -155,6 +157,10 @@
                 <h3 class="event-card__title">${escapeHtml(ev.title)}</h3>
                 <p class="event-card__time">${time} • ${escapeHtml(ev.location || 'Online')}</p>
                 <p class="event-card__host">by ${escapeHtml(ev.creator_name)}</p>
+                ${ev.image_path 
+                    ? `<div class="event-card__image-container"><img src="${escapeHtml(ev.image_path)}" alt="${escapeHtml(ev.title)}" class="event-card__image"></div>`
+                    : `<div class="event-card__image-container event-card__image-fallback"></div>`
+                }
                 <div class="event-card__footer">
                     <span style="font-weight:bold; color:var(--color-primary);">${price}</span>
                     <span class="event-card__seats ${seatsClass}">
@@ -271,6 +277,16 @@
             modalPrice.textContent = 'Price: ' + (price > 0 ? price.toFixed(2) + ' ETB' : 'FREE');
         }
         modalDesc.textContent = ev.description || 'No description provided.';
+
+        if (modalImageContainer && modalImage) {
+            if (ev.image_path) {
+                modalImage.src = ev.image_path;
+                modalImage.alt = ev.title;
+                modalImageContainer.style.display = 'block';
+            } else {
+                modalImageContainer.style.display = 'none';
+            }
+        }
 
         const modalSaveBtn = document.getElementById('modal-save-btn');
         if (modalSaveBtn) {

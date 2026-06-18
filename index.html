@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Browse and book exciting events on EventHub. Find concerts, workshops, meetups and more.">
     <title>EventHub — Discover Events</title>
-    <link rel="stylesheet" href="css/styles.css?v=p3r-2">
+    <link rel="stylesheet" href="css/styles.css?v=p3r-3">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -119,6 +119,9 @@
                 <span id="modal-location" style="margin-right:1rem;"></span>
                 <span id="modal-price"></span>
             </div>
+            <div id="modal-image-container" class="modal__image-container" style="display:none;">
+                <img id="modal-image" src="" alt="" class="modal__image">
+            </div>
             <p class="modal__desc" id="modal-desc"></p>
             <div class="modal__seats">
                 <div class="seats-bar">
@@ -142,6 +145,6 @@
     </footer>
 
     <script src="js/p3r-dropdown.js"></script>
-    <script src="js/events.js?v=1.0.2"></script>
+    <script src="js/events.js?v=1.0.3"></script>
 </body>
 </html>

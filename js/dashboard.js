@@ -49,6 +49,8 @@
     const eventFormError   = document.getElementById('event-form-error');
     const eventFormSuccess = document.getElementById('event-form-success');
     const eventFormSubmit  = document.getElementById('event-form-submit');
+    const eventFormImagePreviewContainer = document.getElementById('event-form-image-preview-container');
+    const eventFormImagePreview = document.getElementById('event-form-image-preview');
 
     // ─── DOM: Attendees Modal ───────────────────────────────
     const attendeesModal    = document.getElementById('attendees-modal');
@@ -257,6 +259,10 @@
             eventFormLocation.value = '';
             eventFormPrice.value = '';
             eventFormDesc.value  = '';
+            const imageInput = document.getElementById('eventImage');
+            if (imageInput) imageInput.value = '';
+            if (eventFormImagePreviewContainer) eventFormImagePreviewContainer.style.display = 'none';
+            if (eventFormImagePreview) eventFormImagePreview.src = '';
             clearFormMessages();
             openEventFormModal();
         });
@@ -284,6 +290,19 @@
         const mi = String(dt.getMinutes()).padStart(2, '0');
         eventFormDate.value = `${y}-${m}-${d}T${h}:${mi}`;
 
+        const imageInput = document.getElementById('eventImage');
+        if (imageInput) imageInput.value = '';
+
+        if (eventFormImagePreviewContainer && eventFormImagePreview) {
+            if (ev.image_path) {
+                eventFormImagePreview.src = ev.image_path;
+                eventFormImagePreviewContainer.style.display = 'block';
+            } else {
+                eventFormImagePreviewContainer.style.display = 'none';
+                eventFormImagePreview.src = '';
+            }
+        }
+
         clearFormMessages();
         openEventFormModal();
     }
@@ -294,34 +313,47 @@
             e.preventDefault();
             clearFormMessages();
 
-            const isEdit  = eventFormId.value !== '';
-            const payload = {
-                title:       eventFormName.value.trim(),
-                event_type:  eventFormType.value,
-                event_date:  eventFormDate.value,
-                location:    eventFormLocation.value.trim() || 'Online',
-                ticket_price: parseFloat(eventFormPrice.value) || 0,
-                total_seats: parseInt(eventFormSeats.value, 10),
-                description: eventFormDesc.value.trim(),
-            };
+            const isEdit = eventFormId.value !== '';
+            
+            const title = eventFormName.value.trim();
+            const event_type = eventFormType.value;
+            const event_date = eventFormDate.value;
+            const location = eventFormLocation.value.trim() || 'Online';
+            const ticket_price = parseFloat(eventFormPrice.value) || 0;
+            const total_seats = parseInt(eventFormSeats.value, 10);
+            const description = eventFormDesc.value.trim();
 
-            if (isEdit) payload.id = parseInt(eventFormId.value, 10);
-
-            if (!payload.title || !payload.event_type || !payload.event_date || payload.total_seats < 1) {
+            if (!title || !event_type || !event_date || total_seats < 1) {
                 showFormError('Please fill in all required fields.');
                 return;
             }
 
-            const method = isEdit ? 'PUT' : 'POST';
+            const formData = new FormData();
+            formData.append('title', title);
+            formData.append('event_type', event_type);
+            formData.append('event_date', event_date);
+            formData.append('location', location);
+            formData.append('ticket_price', ticket_price);
+            formData.append('total_seats', total_seats);
+            formData.append('description', description);
+
+            if (isEdit) {
+                formData.append('id', parseInt(eventFormId.value, 10));
+                formData.append('_method', 'PUT');
+            }
+
+            const imageInput = document.getElementById('eventImage');
+            if (imageInput && imageInput.files.length > 0) {
+                formData.append('event_image', imageInput.files[0]);
+            }
 
             eventFormSubmit.disabled = true;
             eventFormSubmit.textContent = 'Saving…';
 
             try {
                 const res = await fetch(API_EVENTS, {
-                    method,
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload),
+                    method: 'POST',
+                    body: formData,
                 });
 
                 const data = await res.json();
@@ -596,6 +628,10 @@
                 </div>
                 <h3 class="event-card__title">${escapeHtml(ev.title)}</h3>
                 <p class="event-card__time">${time} • ${escapeHtml(ev.location || 'Online')}</p>
+                ${ev.image_path 
+                    ? `<div class="event-card__image-container"><img src="${escapeHtml(ev.image_path)}" alt="${escapeHtml(ev.title)}" class="event-card__image"></div>`
+                    : `<div class="event-card__image-container event-card__image-fallback"></div>`
+                }
                 <div class="event-card__footer">
                     <span style="font-weight:bold; color:var(--color-primary);">${price}</span>
                     <span class="event-card__seats ${seatsClass}">${ev.available_seats <= 0 ? 'Waitlist Available' : ev.available_seats + ' seats left'}</span>
@@ -661,6 +697,30 @@
     if(eventFormClose) eventFormClose.addEventListener('click', closeEventFormModal);
     if(eventFormCancel) eventFormCancel.addEventListener('click', closeEventFormModal);
     if(eventFormBackdrop) eventFormBackdrop.addEventListener('click', closeEventFormModal);
+
+    // Setup file input change preview
+    const imageInput = document.getElementById('eventImage');
+    if (imageInput) {
+        imageInput.addEventListener('change', function() {
+            const file = this.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    if (eventFormImagePreview && eventFormImagePreviewContainer) {
+                        eventFormImagePreview.src = e.target.result;
+                        eventFormImagePreviewContainer.style.display = 'block';
+                    }
+                };
+                reader.readAsDataURL(file);
+            } else {
+                if (eventFormImagePreviewContainer && eventFormImagePreview) {
+                    if (!eventFormImagePreview.src.startsWith('http') && !eventFormImagePreview.src.startsWith('uploads/')) {
+                        eventFormImagePreviewContainer.style.display = 'none';
+                    }
+                }
+            }
+        });
+    }
 
     function showConfirm(title, message, onConfirm) {
         confirmTitle.textContent = title;
