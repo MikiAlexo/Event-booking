@@ -1,5 +1,6 @@
 /**
- * dashboard.js - User dashboard: manage events, view bookings, cancel tickets
+ * dashboard.js - Modern Sidebar + Main Content User Dashboard
+ * Handles events management, bookings, saved events, and attendee check-ins.
  */
 
 (function () {
@@ -9,35 +10,26 @@
     const API_EVENTS   = 'api/events.php';
     const API_BOOKINGS = 'api/bookings.php';
 
-    // ─── DOM: Nav ───────────────────────────────────────────
-    const navUserName = document.getElementById('nav-user-name');
-    const navLogout   = document.getElementById('nav-logout');
-    const navBalance  = document.getElementById('nav-balance');
+    // ─── DOM: Layout Elements ────────────────────────────────
+    const sidebar          = document.getElementById('sidebar');
+    const sidebarOverlay   = document.getElementById('sidebar-overlay');
+    const menuToggle       = document.getElementById('menu-toggle');
+    const tabs             = document.querySelectorAll('.tab');
+    const tabPanels        = document.querySelectorAll('.tab-panel');
 
-    // ─── DOM: Tabs ──────────────────────────────────────────
-    const tabs       = document.querySelectorAll('.tab');
-    const tabPanels  = document.querySelectorAll('.tab-panel');
+    // ─── DOM: Header Elements ────────────────────────────────
+    const navUserName      = document.getElementById('nav-user-name');
+    const navBalance       = document.getElementById('nav-balance');
+    const navLogout        = document.getElementById('nav-logout');
 
-    // ─── DOM: My Events ─────────────────────────────────────
-    const myEventsList  = document.getElementById('my-events-list');
-    const myEventsEmpty = document.getElementById('my-events-empty');
-    const btnNewEvent   = document.getElementById('btn-new-event');
+    // ─── DOM: My Events Panel ───────────────────────────────
+    const myEventsList     = document.getElementById('my-events-list');
+    const myEventsEmpty    = document.getElementById('my-events-empty');
+    const btnNewEvent      = document.getElementById('btn-new-event');
 
-    // ─── DOM: My Bookings ───────────────────────────────────
-    const myBookingsList  = document.getElementById('my-bookings-list');
-    const myBookingsEmpty = document.getElementById('my-bookings-empty');
-
-    // ─── DOM: Saved Events ──────────────────────────────────
-    const savedEventsList  = document.getElementById('saved-events-list');
-    const savedEventsEmpty = document.getElementById('saved-events-empty');
-
-    // ─── DOM: Event Form Modal ──────────────────────────────
-    const eventFormModal   = document.getElementById('event-form-modal');
-    const eventFormBackdrop = document.getElementById('event-form-backdrop');
-    const eventFormClose   = document.getElementById('event-form-close');
-    const eventFormCancel  = document.getElementById('event-form-cancel');
-    const eventFormTitle   = document.getElementById('event-form-title');
+    // ─── DOM: Create Event Form & Upload Zone ────────────────
     const eventForm        = document.getElementById('event-form');
+    const eventFormTitle   = document.getElementById('event-form-title');
     const eventFormId      = document.getElementById('event-form-id');
     const eventFormName    = document.getElementById('event-form-name');
     const eventFormType    = document.getElementById('event-form-type');
@@ -49,29 +41,39 @@
     const eventFormError   = document.getElementById('event-form-error');
     const eventFormSuccess = document.getElementById('event-form-success');
     const eventFormSubmit  = document.getElementById('event-form-submit');
+    
+    const uploadZone       = document.getElementById('upload-zone');
+    const eventImage       = document.getElementById('eventImage');
+    const uploadZonePrompt = document.getElementById('upload-zone-prompt');
+    const btnRemovePoster  = document.getElementById('btn-remove-poster');
     const eventFormImagePreviewContainer = document.getElementById('event-form-image-preview-container');
     const eventFormImagePreview = document.getElementById('event-form-image-preview');
+    const eventFormCancel  = document.getElementById('event-form-cancel');
 
-    // ─── DOM: Attendees Modal ───────────────────────────────
-    const attendeesModal    = document.getElementById('attendees-modal');
-    const attendeesBackdrop = document.getElementById('attendees-backdrop');
-    const attendeesClose    = document.getElementById('attendees-close');
-    const attendeesList     = document.getElementById('attendees-list');
-    const attendeesEmpty    = document.getElementById('attendees-empty');
+    // ─── DOM: My Bookings Panel ──────────────────────────────
+    const myBookingsList   = document.getElementById('my-bookings-list');
+    const myBookingsEmpty  = document.getElementById('my-bookings-empty');
 
-    // ─── DOM: Confirm Modal ─────────────────────────────────
-    const confirmModal    = document.getElementById('confirm-modal');
-    const confirmBackdrop = document.getElementById('confirm-backdrop');
-    const confirmTitle    = document.getElementById('confirm-title');
-    const confirmMessage  = document.getElementById('confirm-message');
-    const confirmYes      = document.getElementById('confirm-yes');
-    const confirmNo       = document.getElementById('confirm-no');
+    // ─── DOM: Saved Events Panel ─────────────────────────────
+    const savedEventsList  = document.getElementById('saved-events-list');
+    const savedEventsEmpty = document.getElementById('saved-events-empty');
 
+    // ─── DOM: Confirm Modal ──────────────────────────────────
+    const confirmModal     = document.getElementById('confirm-modal');
+    const confirmBackdrop  = document.getElementById('confirm-backdrop');
+    const confirmTitle     = document.getElementById('confirm-title');
+    const confirmMessage   = document.getElementById('confirm-message');
+    const confirmYes       = document.getElementById('confirm-yes');
+    const confirmNo        = document.getElementById('confirm-no');
+
+    // ─── State Variables ─────────────────────────────────────
     let currentUser = null;
     let confirmCallback = null;
+    let currentAttendees = [];
+    let selectedEventId = null;
 
     // ═════════════════════════════════════════════════════════
-    //  INIT
+    //  INITIALIZATION
     // ═════════════════════════════════════════════════════════
     async function init() {
         const authed = await checkAuth();
@@ -79,49 +81,37 @@
             window.location.href = 'auth.html';
             return;
         }
-        setupTabs();
+        setupNavigation();
+        setupUploadZone();
+        setupAttendeeSearch();
         loadMyEvents();
         loadMyBookings();
         loadSavedEvents();
     }
 
-    // ─── Auth Check ─────────────────────────────────────────
+    // ─── Auth Verification ──────────────────────────────────
     async function checkAuth() {
         try {
             const res  = await fetch(`${API_AUTH}?action=check`);
             const data = await res.json();
             if (data.logged_in) {
                 currentUser = data.user;
-                navUserName.textContent = `Hi, ${currentUser.full_name}`;
+                if (navUserName) navUserName.textContent = `Welcome back, ${currentUser.full_name}!`;
                 updateBalance(currentUser.balance);
-                
-                // Update profile card
-                const profileWelcomeName = document.getElementById('dashboard-welcome-name');
-                const profileWelcomeEmail = document.getElementById('dashboard-welcome-email');
-                const dashboardProfile = document.getElementById('dashboard-profile');
-                
-                if (profileWelcomeName) profileWelcomeName.textContent = `Hi, ${currentUser.full_name}`;
-                if (profileWelcomeEmail) profileWelcomeEmail.textContent = currentUser.email;
-                if (dashboardProfile) dashboardProfile.classList.remove('hidden');
-
                 return true;
             }
-        } catch (e) { console.error('Auth check error:', e); }
+        } catch (e) { console.error('Auth verification error:', e); }
         return false;
     }
 
     function updateBalance(newBalance) {
-        if(navBalance && newBalance !== undefined) {
-            navBalance.innerHTML = `<span>Balance: ${Number(newBalance).toFixed(2)} ETB</span>`;
-        }
-        const profileWelcomeBalance = document.getElementById('dashboard-welcome-balance');
-        if (profileWelcomeBalance && newBalance !== undefined) {
-            profileWelcomeBalance.textContent = `${Number(newBalance).toFixed(2)} ETB`;
+        if (navBalance && newBalance !== undefined) {
+            navBalance.innerHTML = `<span>${Number(newBalance).toFixed(2)} Birr</span>`;
         }
     }
 
     // ─── Logout ─────────────────────────────────────────────
-    if(navLogout) {
+    if (navLogout) {
         navLogout.addEventListener('click', async () => {
             await fetch(`${API_AUTH}?action=logout`);
             localStorage.removeItem('user');
@@ -129,33 +119,81 @@
         });
     }
 
-    // ─── Tabs ───────────────────────────────────────────────
-    function setupTabs() {
+    // ═════════════════════════════════════════════════════════
+    //  NAVIGATION & TABS
+    // ═════════════════════════════════════════════════════════
+    function setupNavigation() {
+        // Tab switching
         tabs.forEach(tab => {
             tab.addEventListener('click', () => {
-                tabs.forEach(t => t.classList.remove('active'));
-                tabPanels.forEach(p => p.classList.add('hidden'));
-                tab.classList.add('active');
-
                 const target = tab.dataset.tab;
-                document.getElementById('tab-' + target).classList.remove('hidden');
-                document.getElementById('tab-' + target).classList.add('active');
+                switchTab(target);
+                
+                // Close sidebar on mobile
+                if (sidebar) sidebar.classList.remove('active');
+                if (sidebarOverlay) sidebarOverlay.classList.remove('active');
+            });
+        });
+
+        // Hamburger mobile toggle
+        if (menuToggle && sidebar && sidebarOverlay) {
+            menuToggle.addEventListener('click', () => {
+                sidebar.classList.toggle('active');
+                sidebarOverlay.classList.toggle('active');
+            });
+
+            sidebarOverlay.addEventListener('click', () => {
+                sidebar.classList.remove('active');
+                sidebarOverlay.classList.remove('active');
+            });
+        }
+
+        // Inline tab redirects (e.g. from help guides)
+        document.querySelectorAll('[data-go-tab]').forEach(el => {
+            el.addEventListener('click', (e) => {
+                e.preventDefault();
+                switchTab(el.dataset.goTab);
             });
         });
     }
 
+    function switchTab(tabName) {
+        tabs.forEach(t => {
+            if (t.dataset.tab === tabName) {
+                t.classList.add('active');
+            } else {
+                t.classList.remove('active');
+            }
+        });
+
+        tabPanels.forEach(panel => {
+            if (panel.id === 'tab-' + tabName) {
+                panel.classList.remove('hidden');
+                panel.classList.add('active');
+            } else {
+                panel.classList.add('hidden');
+                panel.classList.remove('active');
+            }
+        });
+
+        // Scroll main content to top
+        const mainContent = document.querySelector('.main-content');
+        if (mainContent) mainContent.scrollTop = 0;
+    }
+
     // ═════════════════════════════════════════════════════════
-    //  MY EVENTS
+    //  MY EVENTS PANEL
     // ═════════════════════════════════════════════════════════
     async function loadMyEvents() {
+        if (!myEventsList) return;
         myEventsList.innerHTML = '';
         myEventsEmpty.classList.add('hidden');
 
         try {
-            const res    = await fetch(`${API_EVENTS}?creator_id=${currentUser.id}`);
+            const res = await fetch(`${API_EVENTS}?creator_id=${currentUser.id}`);
             const events = await res.json();
 
-            // Calculate Analytics
+            // Calculate Overview metrics
             const totalEvents = events.length;
             let totalTicketsSold = 0;
             let totalCapacity = 0;
@@ -168,26 +206,14 @@
                 totalRevenue += booked * Number(ev.ticket_price);
             });
 
-            const occupancyRate = totalCapacity > 0 ? Math.round((totalTicketsSold / totalCapacity) * 100) : 0;
-
+            // Update stats indicators
             const statsEventsCount = document.getElementById('stats-events-count');
             const statsTicketsSold = document.getElementById('stats-tickets-sold');
             const statsRevenue = document.getElementById('stats-revenue');
-            const statsOccupancy = document.getElementById('stats-occupancy');
-            const hostAnalytics = document.getElementById('host-analytics');
 
             if (statsEventsCount) statsEventsCount.textContent = totalEvents;
             if (statsTicketsSold) statsTicketsSold.textContent = totalTicketsSold;
-            if (statsRevenue) statsRevenue.textContent = `${totalRevenue.toFixed(2)} ETB`;
-            if (statsOccupancy) statsOccupancy.textContent = `${occupancyRate}%`;
-
-            if (hostAnalytics) {
-                if (totalEvents > 0) {
-                    hostAnalytics.classList.remove('hidden');
-                } else {
-                    hostAnalytics.classList.add('hidden');
-                }
-            }
+            if (statsRevenue) statsRevenue.textContent = `${totalRevenue.toFixed(2)} Birr`;
 
             if (!events.length) {
                 myEventsEmpty.classList.remove('hidden');
@@ -196,14 +222,14 @@
 
             events.forEach(ev => myEventsList.appendChild(createMyEventRow(ev)));
         } catch (e) {
-            console.error('Error loading my events:', e);
+            console.error('Error loading events list:', e);
             myEventsEmpty.classList.remove('hidden');
         }
     }
 
     function createMyEventRow(ev) {
-        const row = document.createElement('div');
-        row.className = 'event-row';
+        const card = document.createElement('div');
+        card.className = 'my-event-card';
 
         const dateObj = parseSQLDate(ev.event_date);
         const dateStr = dateObj.toLocaleDateString('en-US', {
@@ -214,114 +240,179 @@
         });
 
         const booked = ev.total_seats - ev.available_seats;
+        const pct = ev.total_seats > 0 ? Math.round((booked / ev.total_seats) * 100) : 0;
+        const earnings = booked * Number(ev.ticket_price);
 
-        row.innerHTML = `
-            <div class="event-row__info">
-                <h3 class="event-row__title">${escapeHtml(ev.title)}</h3>
-                <p class="event-row__meta">
-                    <span class="badge badge--${ev.event_type.toLowerCase()}">${escapeHtml(ev.event_type)}</span>
-                    <span>${dateStr} at ${timeStr}</span>
-                    <span>${booked} / ${ev.total_seats} booked</span>
-                </p>
+        card.innerHTML = `
+            <div class="my-event-card__thumbnail">
+                ${ev.image_path 
+                    ? `<img src="${escapeHtml(ev.image_path)}" alt="${escapeHtml(ev.title)}">` 
+                    : `<svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>`}
             </div>
-            <div class="event-row__actions" style="display:flex; gap:0.5rem;">
-                <button class="btn btn--sm btn--primary attendees-btn" data-id="${ev.id}"><span>Attendees</span></button>
-                <button class="btn btn--sm btn--outline edit-event-btn" data-id="${ev.id}"><span>Edit</span></button>
-                <button class="btn btn--sm btn--danger-outline delete-event-btn" data-id="${ev.id}"><span>Delete</span></button>
+            <div class="my-event-card__info">
+                <h3 class="my-event-card__title" title="${escapeHtml(ev.title)}">${escapeHtml(ev.title)}</h3>
+                <div class="my-event-card__meta">
+                    <span class="badge badge--${ev.event_type.toLowerCase()}">${escapeHtml(ev.event_type)}</span>
+                    <span class="my-event-card__meta-item">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                        <span>${dateStr} at ${timeStr}</span>
+                    </span>
+                    <span class="my-event-card__meta-item">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a8 8 0 0 0-8 8c0 5.25 8 12 8 12s8-6.75 8-12a8 8 0 0 0-8-8z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+                        <span>${escapeHtml(ev.location || 'Online')}</span>
+                    </span>
+                </div>
+            </div>
+            <div class="my-event-card__progress">
+                <div class="my-event-card__progress-label">
+                    <span>Booked</span>
+                    <span>${pct}% (${booked}/${ev.total_seats})</span>
+                </div>
+                <div class="my-event-card__progress-bar">
+                    <div class="my-event-card__progress-fill ${pct >= 100 ? 'full' : ''}" style="width: ${pct}%"></div>
+                </div>
+            </div>
+            <div class="my-event-card__earnings">
+                <span class="my-event-card__earnings-label">Revenue</span>
+                <span class="my-event-card__earnings-value">${earnings.toFixed(2)} Birr</span>
+            </div>
+            <div class="my-event-card__actions">
+                <button class="btn btn--sm btn--primary manage-btn"><span>Manage &amp; Check-in</span></button>
             </div>
         `;
 
-        row.querySelector('.attendees-btn').addEventListener('click', () => loadAttendees(ev.id));
-        row.querySelector('.edit-event-btn').addEventListener('click', () => openEditEvent(ev));
-        row.querySelector('.delete-event-btn').addEventListener('click', () => {
-            showConfirm(
-                'Delete Event',
-                `Are you sure you want to delete "${escapeHtml(ev.title)}"? All associated bookings will also be removed.`,
-                () => deleteEvent(ev.id)
-            );
-        });
+        card.querySelector('.manage-btn').addEventListener('click', () => showCheckInView(ev));
 
-        return row;
+        return card;
     }
 
-    // ── New Event ───────────────────────────────────────────
-    if(btnNewEvent) {
+    if (btnNewEvent) {
         btnNewEvent.addEventListener('click', () => {
+            clearForm();
             eventFormTitle.textContent = 'Create New Event';
             eventFormSubmit.textContent = 'Create Event';
             eventFormSubmit.dataset.label = 'Create Event';
-            eventFormId.value    = '';
-            eventFormName.value  = '';
-            eventFormType.value  = '';
-            eventFormType.dispatchEvent(new Event('change'));
-            eventFormDate.value  = '';
-            eventFormSeats.value = '';
-            eventFormLocation.value = '';
-            eventFormPrice.value = '';
-            eventFormDesc.value  = '';
-            const imageInput = document.getElementById('eventImage');
-            if (imageInput) imageInput.value = '';
-            if (eventFormImagePreviewContainer) eventFormImagePreviewContainer.style.display = 'none';
-            if (eventFormImagePreview) eventFormImagePreview.src = '';
-            clearFormMessages();
-            openEventFormModal();
+            switchTab('create-event');
         });
     }
 
-    // ── Edit Event ──────────────────────────────────────────
-    function openEditEvent(ev) {
-        eventFormTitle.textContent = 'Edit Event';
-        eventFormSubmit.textContent = 'Update Event';
-        eventFormSubmit.dataset.label = 'Update Event';
-        eventFormId.value    = ev.id;
-        eventFormName.value  = ev.title;
-        eventFormType.value  = ev.event_type;
-        eventFormType.dispatchEvent(new Event('change'));
-        eventFormSeats.value = ev.total_seats;
-        eventFormLocation.value = ev.location || '';
-        eventFormPrice.value = ev.ticket_price || 0;
-        eventFormDesc.value  = ev.description || '';
+    // ═════════════════════════════════════════════════════════
+    //  CREATE EVENT FORM & POSTER UPLOAD ZONE
+    // ═════════════════════════════════════════════════════════
+    function setupUploadZone() {
+        if (!uploadZone || !eventImage) return;
 
-        const dt = parseSQLDate(ev.event_date);
-        const y  = dt.getFullYear();
-        const m  = String(dt.getMonth() + 1).padStart(2, '0');
-        const d  = String(dt.getDate()).padStart(2, '0');
-        const h  = String(dt.getHours()).padStart(2, '0');
-        const mi = String(dt.getMinutes()).padStart(2, '0');
-        eventFormDate.value = `${y}-${m}-${d}T${h}:${mi}`;
+        // Click to choose
+        uploadZone.addEventListener('click', (e) => {
+            if (e.target.closest('#btn-remove-poster')) return;
+            eventImage.click();
+        });
 
-        const imageInput = document.getElementById('eventImage');
-        if (imageInput) imageInput.value = '';
+        // Drag & Drop
+        uploadZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadZone.classList.add('dragover');
+        });
 
-        if (eventFormImagePreviewContainer && eventFormImagePreview) {
-            if (ev.image_path) {
-                eventFormImagePreview.src = ev.image_path;
-                eventFormImagePreviewContainer.style.display = 'block';
-            } else {
-                eventFormImagePreviewContainer.style.display = 'none';
-                eventFormImagePreview.src = '';
+        uploadZone.addEventListener('dragleave', () => {
+            uploadZone.classList.remove('dragover');
+        });
+
+        uploadZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadZone.classList.remove('dragover');
+            if (e.dataTransfer.files.length > 0) {
+                eventImage.files = e.dataTransfer.files;
+                handlePosterFileSelected(eventImage.files[0]);
             }
+        });
+
+        // Input change
+        eventImage.addEventListener('change', () => {
+            if (eventImage.files.length > 0) {
+                handlePosterFileSelected(eventImage.files[0]);
+            }
+        });
+
+        // Remove poster
+        if (btnRemovePoster) {
+            btnRemovePoster.addEventListener('click', (e) => {
+                e.stopPropagation();
+                clearUploadPreview();
+            });
         }
 
-        clearFormMessages();
-        openEventFormModal();
+        // Cancel Form Action
+        if (eventFormCancel) {
+            eventFormCancel.addEventListener('click', () => {
+                clearForm();
+                switchTab('my-events');
+            });
+        }
     }
 
-    // ── Save Event (Create or Update) ───────────────────────
-    if(eventForm) {
+    function handlePosterFileSelected(file) {
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            if (eventFormImagePreview && eventFormImagePreviewContainer && uploadZonePrompt) {
+                eventFormImagePreview.src = e.target.result;
+                eventFormImagePreviewContainer.style.display = 'block';
+                uploadZonePrompt.style.display = 'none';
+            }
+        };
+        reader.readAsDataURL(file);
+    }
+
+    function clearUploadPreview() {
+        if (eventImage) eventImage.value = '';
+        if (eventFormImagePreview) eventFormImagePreview.src = '';
+        if (eventFormImagePreviewContainer) eventFormImagePreviewContainer.style.display = 'none';
+        if (uploadZonePrompt) uploadZonePrompt.style.display = 'flex';
+    }
+
+    function clearForm() {
+        if (eventFormId) eventFormId.value = '';
+        if (eventFormName) eventFormName.value = '';
+        if (eventFormType) {
+            eventFormType.value = '';
+            eventFormType.dispatchEvent(new Event('change'));
+        }
+        if (eventFormDate) eventFormDate.value = '';
+        if (eventFormSeats) eventFormSeats.value = '';
+        if (eventFormLocation) eventFormLocation.value = '';
+        if (eventFormPrice) eventFormPrice.value = '';
+        if (eventFormDesc) eventFormDesc.value = '';
+        clearUploadPreview();
+        clearFormMessages();
+    }
+
+    function clearFormMessages() {
+        if (eventFormError) {
+            eventFormError.style.display = 'none';
+            eventFormError.textContent = '';
+        }
+        if (eventFormSuccess) {
+            eventFormSuccess.style.display = 'none';
+            eventFormSuccess.textContent = '';
+        }
+    }
+
+    // Submit Action (Create / Update)
+    if (eventForm) {
         eventForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             clearFormMessages();
 
             const isEdit = eventFormId.value !== '';
             
-            const title = eventFormName.value.trim();
-            const event_type = eventFormType.value;
-            const event_date = eventFormDate.value;
-            const location = eventFormLocation.value.trim() || 'Online';
+            const title        = eventFormName.value.trim();
+            const event_type   = eventFormType.value;
+            const event_date   = eventFormDate.value;
+            const location     = eventFormLocation.value.trim() || 'Online';
             const ticket_price = parseFloat(eventFormPrice.value) || 0;
-            const total_seats = parseInt(eventFormSeats.value, 10);
-            const description = eventFormDesc.value.trim();
+            const total_seats  = parseInt(eventFormSeats.value, 10);
+            const description  = eventFormDesc.value.trim();
 
             if (!title || !event_type || !event_date || total_seats < 1) {
                 showFormError('Please fill in all required fields.');
@@ -342,9 +433,8 @@
                 formData.append('_method', 'PUT');
             }
 
-            const imageInput = document.getElementById('eventImage');
-            if (imageInput && imageInput.files.length > 0) {
-                formData.append('event_image', imageInput.files[0]);
+            if (eventImage && eventImage.files.length > 0) {
+                formData.append('event_image', eventImage.files[0]);
             }
 
             eventFormSubmit.disabled = true;
@@ -365,7 +455,8 @@
 
                 showFormSuccess(isEdit ? 'Event updated successfully!' : 'Event created successfully!');
                 setTimeout(() => {
-                    closeEventFormModal();
+                    clearForm();
+                    switchTab('my-events');
                     loadMyEvents();
                 }, 1000);
 
@@ -378,7 +469,56 @@
         });
     }
 
-    // ── Delete Event ────────────────────────────────────────
+    function showFormError(msg) {
+        if (eventFormError) {
+            eventFormError.textContent = msg;
+            eventFormError.style.display = 'block';
+        }
+    }
+
+    function showFormSuccess(msg) {
+        if (eventFormSuccess) {
+            eventFormSuccess.textContent = msg;
+            eventFormSuccess.style.display = 'block';
+        }
+    }
+
+    // ─── Edit Event Action Redirect ──────────────────────────
+    function openEditEvent(ev) {
+        clearForm();
+        eventFormTitle.textContent = 'Edit Event';
+        eventFormSubmit.textContent = 'Update Event';
+        eventFormSubmit.dataset.label = 'Update Event';
+        
+        eventFormId.value       = ev.id;
+        eventFormName.value     = ev.title;
+        eventFormType.value     = ev.event_type;
+        eventFormType.dispatchEvent(new Event('change'));
+        eventFormSeats.value    = ev.total_seats;
+        eventFormLocation.value = ev.location || '';
+        eventFormPrice.value    = ev.ticket_price || 0;
+        eventFormDesc.value     = ev.description || '';
+
+        const dt = parseSQLDate(ev.event_date);
+        const y  = dt.getFullYear();
+        const m  = String(dt.getMonth() + 1).padStart(2, '0');
+        const d  = String(dt.getDate()).padStart(2, '0');
+        const h  = String(dt.getHours()).padStart(2, '0');
+        const mi = String(dt.getMinutes()).padStart(2, '0');
+        eventFormDate.value = `${y}-${m}-${d}T${h}:${mi}`;
+
+        if (ev.image_path) {
+            if (eventFormImagePreview && eventFormImagePreviewContainer && uploadZonePrompt) {
+                eventFormImagePreview.src = ev.image_path;
+                eventFormImagePreviewContainer.style.display = 'block';
+                uploadZonePrompt.style.display = 'none';
+            }
+        }
+
+        switchTab('create-event');
+    }
+
+    // ─── Delete Event Action ─────────────────────────────────
     async function deleteEvent(eventId) {
         try {
             const res = await fetch(`${API_EVENTS}?id=${eventId}`, { method: 'DELETE' });
@@ -398,90 +538,211 @@
     }
 
     // ═════════════════════════════════════════════════════════
-    //  ATTENDEES (HOST TOOLS)
+    //  CHECK-IN MANAGER
     // ═════════════════════════════════════════════════════════
-    async function loadAttendees(eventId) {
-        attendeesModal.classList.remove('hidden');
-        document.body.style.overflow = 'hidden';
-        attendeesList.innerHTML = '<div class="loading-spinner"><div class="spinner"></div></div>';
-        attendeesEmpty.classList.add('hidden');
+    async function showCheckInView(ev) {
+        selectedEventId = ev.id;
+        switchTab('check-in');
+
+        const noEventSummary = document.getElementById('check-in-no-event-summary');
+        const eventSummary   = document.getElementById('check-in-event-summary');
+
+        if (noEventSummary) noEventSummary.classList.add('hidden');
+        if (eventSummary) eventSummary.classList.remove('hidden');
+
+        // Populate Left Column details
+        const posterEl   = document.getElementById('check-in-event-poster');
+        const titleEl    = document.getElementById('check-in-event-title');
+        const typeEl     = document.getElementById('check-in-event-type');
+        const dateEl     = document.getElementById('check-in-event-date');
+        const locationEl = document.getElementById('check-in-event-location');
+        const capacityEl = document.getElementById('check-in-event-capacity');
+
+        const dateObj = parseSQLDate(ev.event_date);
+        const dateStr = dateObj.toLocaleDateString('en-US', {
+            year: 'numeric', month: 'short', day: 'numeric'
+        });
+        const timeStr = dateObj.toLocaleTimeString('en-US', {
+            hour: 'numeric', minute: '2-digit', hour12: true
+        });
+
+        const booked = ev.total_seats - ev.available_seats;
+
+        if (posterEl) {
+            if (ev.image_path) {
+                posterEl.src = ev.image_path;
+                posterEl.parentElement.style.display = 'block';
+            } else {
+                posterEl.src = '';
+                posterEl.parentElement.style.display = 'none';
+            }
+        }
+        if (titleEl) titleEl.textContent = ev.title;
+        if (typeEl) {
+            typeEl.textContent = ev.event_type;
+            typeEl.className = `badge badge--${ev.event_type.toLowerCase()}`;
+        }
+        if (dateEl) dateEl.textContent = `${dateStr} at ${timeStr}`;
+        if (locationEl) locationEl.textContent = ev.location || 'Online';
+        if (capacityEl) capacityEl.textContent = `${booked} / ${ev.total_seats} booked`;
+
+        // Re-bind Action Buttons
+        const btnEdit   = document.getElementById('check-in-event-edit');
+        const btnDelete = document.getElementById('check-in-event-delete');
+
+        if (btnEdit) {
+            const newEdit = btnEdit.cloneNode(true);
+            btnEdit.parentNode.replaceChild(newEdit, btnEdit);
+            newEdit.addEventListener('click', () => openEditEvent(ev));
+        }
+
+        if (btnDelete) {
+            const newDelete = btnDelete.cloneNode(true);
+            btnDelete.parentNode.replaceChild(newDelete, btnDelete);
+            newDelete.addEventListener('click', () => {
+                showConfirm(
+                    'Delete Event',
+                    `Are you sure you want to delete "${escapeHtml(ev.title)}"? This will release all bookings.`,
+                    async () => {
+                        await deleteEvent(ev.id);
+                        if (noEventSummary) noEventSummary.classList.remove('hidden');
+                        if (eventSummary) eventSummary.classList.add('hidden');
+                        const listContainer = document.getElementById('check-in-attendees-list');
+                        if (listContainer) listContainer.innerHTML = '<p class="select-hint">Please select an event from "My Events" to view attendees.</p>';
+                        switchTab('my-events');
+                    }
+                );
+            });
+        }
+
+        // Clear search box value when loading new event
+        const attendeeSearch = document.getElementById('attendee-search');
+        if (attendeeSearch) attendeeSearch.value = '';
+
+        // Load attendees
+        await loadCheckInAttendees(ev.id);
+    }
+
+    async function loadCheckInAttendees(eventId) {
+        const listContainer = document.getElementById('check-in-attendees-list');
+        const emptyState = document.getElementById('check-in-attendees-empty');
+
+        if (listContainer) {
+            listContainer.innerHTML = '<div class="loading-spinner"><div class="spinner"></div></div>';
+        }
+        if (emptyState) emptyState.classList.add('hidden');
 
         try {
             const res = await fetch(`${API_BOOKINGS}?action=attendees&event_id=${eventId}`);
-            const attendees = await res.json();
-
-            attendeesList.innerHTML = '';
-            if (!attendees.length) {
-                attendeesEmpty.classList.remove('hidden');
-                return;
+            currentAttendees = await res.json();
+            renderAttendeeCheckInList(currentAttendees);
+        } catch (e) {
+            console.error('Error loading attendees:', e);
+            if (listContainer) {
+                listContainer.innerHTML = '<p class="auth-error">Failed to load attendees list.</p>';
             }
-
-            attendees.forEach(a => {
-                const row = document.createElement('div');
-                row.className = 'event-row';
-                row.style.alignItems = 'center';
-                const isCheckedIn = parseInt(a.checked_in) === 1;
-
-                row.innerHTML = `
-                    <div class="event-row__info">
-                        <h4 style="margin:0;">${escapeHtml(a.full_name)}</h4>
-                        <p style="margin:0; font-size:0.875rem; color:#aaa;">${escapeHtml(a.email)}</p>
-                    </div>
-                    <div class="event-row__actions">
-                        <label style="display:flex; align-items:center; gap:0.5rem; cursor:pointer;">
-                            <input type="checkbox" class="checkin-toggle" data-id="${a.booking_id}" ${isCheckedIn ? 'checked' : ''} style="width:1.25rem; height:1.25rem; accent-color:var(--color-primary);">
-                            <span style="color:${isCheckedIn ? 'var(--color-primary)' : '#aaa'}">${isCheckedIn ? 'Checked In' : 'Check In'}</span>
-                        </label>
-                    </div>
-                `;
-
-                row.querySelector('.checkin-toggle').addEventListener('change', async (e) => {
-                    const checked = e.target.checked;
-                    const span = e.target.nextElementSibling;
-                    try {
-                        await fetch(`${API_BOOKINGS}?action=check_in`, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ booking_id: a.booking_id, checked_in: checked })
-                        });
-                        span.textContent = checked ? 'Checked In' : 'Check In';
-                        span.style.color = checked ? 'var(--color-primary)' : '#aaa';
-                    } catch(err) {
-                        e.target.checked = !checked;
-                        alert('Failed to update status.');
-                    }
-                });
-
-                attendeesList.appendChild(row);
-            });
-        } catch(e) {
-            attendeesList.innerHTML = '<p class="auth-error">Failed to load attendees.</p>';
         }
     }
 
-    if(attendeesClose) {
-        attendeesClose.addEventListener('click', () => {
-            attendeesModal.classList.add('hidden');
-            document.body.style.overflow = '';
-        });
-    }
-    if(attendeesBackdrop) {
-        attendeesBackdrop.addEventListener('click', () => {
-            attendeesModal.classList.add('hidden');
-            document.body.style.overflow = '';
+    function renderAttendeeCheckInList(attendees) {
+        const listContainer = document.getElementById('check-in-attendees-list');
+        const emptyState = document.getElementById('check-in-attendees-empty');
+
+        if (!listContainer) return;
+        listContainer.innerHTML = '';
+
+        if (!attendees.length) {
+            if (emptyState) emptyState.classList.remove('hidden');
+            return;
+        }
+
+        if (emptyState) emptyState.classList.add('hidden');
+
+        attendees.forEach(a => {
+            const row = document.createElement('div');
+            row.className = 'attendee-row';
+            const isCheckedIn = parseInt(a.checked_in) === 1;
+
+            row.innerHTML = `
+                <div class="attendee-row__info">
+                    <div class="attendee-row__name">${escapeHtml(a.full_name)}</div>
+                    <div class="attendee-row__email">${escapeHtml(a.email)}</div>
+                </div>
+                <div class="attendee-row__actions">
+                    <span class="badge-status badge-status--${isCheckedIn ? 'checked-in' : 'pending'}">
+                        ${isCheckedIn ? 'Checked In' : 'Pending'}
+                    </span>
+                    ${!isCheckedIn ? `<button class="btn btn--sm btn--outline check-in-btn" data-id="${a.booking_id}"><span>Check In</span></button>` : ''}
+                </div>
+            `;
+
+            if (!isCheckedIn) {
+                row.querySelector('.check-in-btn').addEventListener('click', async (e) => {
+                    const btn = e.currentTarget;
+                    btn.disabled = true;
+                    btn.querySelector('span').textContent = 'Updating...';
+
+                    try {
+                        const res = await fetch(`${API_BOOKINGS}?action=check_in`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ booking_id: a.booking_id, checked_in: true })
+                        });
+                        const data = await res.json();
+                        if (data.success) {
+                            a.checked_in = 1;
+                            // Re-filter with the current input value if any
+                            const query = document.getElementById('attendee-search').value.trim().toLowerCase();
+                            if (query) {
+                                filterAttendees(query);
+                            } else {
+                                renderAttendeeCheckInList(currentAttendees);
+                            }
+                        } else {
+                            alert('Check-in failed.');
+                            btn.disabled = false;
+                            btn.querySelector('span').textContent = 'Check In';
+                        }
+                    } catch (err) {
+                        alert('Network error.');
+                        btn.disabled = false;
+                        btn.querySelector('span').textContent = 'Check In';
+                    }
+                });
+            }
+
+            listContainer.appendChild(row);
         });
     }
 
+    function setupAttendeeSearch() {
+        const attendeeSearch = document.getElementById('attendee-search');
+        if (attendeeSearch) {
+            attendeeSearch.addEventListener('input', function() {
+                filterAttendees(this.value.trim().toLowerCase());
+            });
+        }
+    }
+
+    function filterAttendees(query) {
+        const filtered = currentAttendees.filter(a => 
+            a.full_name.toLowerCase().includes(query) || 
+            a.email.toLowerCase().includes(query)
+        );
+        renderAttendeeCheckInList(filtered);
+    }
+
     // ═════════════════════════════════════════════════════════
-    //  MY BOOKINGS & WAITLISTS
+    //  MY BOOKINGS PANEL
     // ═════════════════════════════════════════════════════════
     async function loadMyBookings() {
+        if (!myBookingsList) return;
         myBookingsList.innerHTML = '';
         myBookingsEmpty.classList.add('hidden');
 
         try {
             const res      = await fetch(`${API_BOOKINGS}?action=list`);
-            const data = await res.json();
+            const data     = await res.json();
             const bookings = data.bookings || [];
             const waitlists = data.waitlists || [];
 
@@ -530,7 +791,7 @@
             </div>
             <div class="booking-row__actions">
                 ${statusBadge}
-                ${!isCancelled && !isWaitlist ? `<button class="btn btn--sm btn--danger-outline cancel-booking-btn" data-id="${b.booking_id}"><span>Cancel</span></button>` : ''}
+                ${!isCancelled && !isWaitlist ? `<button class="btn btn--sm btn--outline btn--danger-outline cancel-booking-btn" data-id="${b.booking_id}"><span>Cancel</span></button>` : ''}
             </div>
         `;
 
@@ -538,7 +799,7 @@
             row.querySelector('.cancel-booking-btn').addEventListener('click', () => {
                 showConfirm(
                     'Cancel Booking',
-                    `Cancel your booking for "${escapeHtml(b.title)}"? Your ETB will be refunded and your seat will be released.`,
+                    `Cancel booking for "${escapeHtml(b.title)}"? Refund will be credited in Birr and your seat will be released.`,
                     () => cancelBooking(b.booking_id)
                 );
             });
@@ -562,7 +823,7 @@
                 return;
             }
             
-            if(data.new_balance !== undefined) {
+            if (data.new_balance !== undefined) {
                 updateBalance(data.new_balance);
             }
 
@@ -574,10 +835,10 @@
     }
 
     // ═════════════════════════════════════════════════════════
-    //  SAVED EVENTS
+    //  SAVED EVENTS PANEL
     // ═════════════════════════════════════════════════════════
     async function loadSavedEvents() {
-        if(!savedEventsList) return;
+        if (!savedEventsList) return;
         savedEventsList.innerHTML = '';
         savedEventsEmpty.classList.add('hidden');
 
@@ -607,10 +868,6 @@
         const dateObj = parseSQLDate(ev.event_date);
         const month   = dateObj.toLocaleString('en-US', { month: 'short' }).toUpperCase();
         const day     = dateObj.getDate();
-
-        const pct = ev.total_seats > 0
-            ? Math.round(((ev.total_seats - ev.available_seats) / ev.total_seats) * 100)
-            : 100;
 
         const price = Number(ev.ticket_price) > 0 ? `${Math.round(ev.ticket_price)} Birr` : 'FREE';
 
@@ -645,7 +902,7 @@
                 <h3 class="event-card__title" title="${escapeHtml(ev.title)}">${escapeHtml(ev.title)}</h3>
                 <div class="event-card__footer-section">
                     <div class="event-card__price-box">
-                        <span class="price-from-label">From</span>
+                        <span class="price-from-label">Price</span>
                         <span class="price-amount">${price}</span>
                     </div>
                     <button class="event-card__ticket-btn">${ev.available_seats <= 0 ? 'Waitlist' : 'Get Ticket'}</button>
@@ -662,7 +919,7 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ event_id: ev.id })
                 });
-                if(res.ok) {
+                if (res.ok) {
                     card.classList.add('fade-out');
                     setTimeout(() => {
                         card.remove();
@@ -672,53 +929,20 @@
                         }
                     }, 300);
                 }
-            } catch(e) {}
+            } catch (e) {}
+        });
+
+        // Ticket action (redirects to browse detail / handles booking flow)
+        card.addEventListener('click', () => {
+            window.location.href = `index.html?event_id=${ev.id}`;
         });
 
         return card;
     }
 
     // ═════════════════════════════════════════════════════════
-    //  MODALS (Form & Confirm)
+    //  CONFIRM DIALOG MODAL
     // ═════════════════════════════════════════════════════════
-    function openEventFormModal() {
-        eventFormModal.classList.remove('hidden');
-        document.body.style.overflow = 'hidden';
-    }
-
-    function closeEventFormModal() {
-        eventFormModal.classList.add('hidden');
-        document.body.style.overflow = '';
-    }
-
-    if(eventFormClose) eventFormClose.addEventListener('click', closeEventFormModal);
-    if(eventFormCancel) eventFormCancel.addEventListener('click', closeEventFormModal);
-    if(eventFormBackdrop) eventFormBackdrop.addEventListener('click', closeEventFormModal);
-
-    // Setup file input change preview
-    const imageInput = document.getElementById('eventImage');
-    if (imageInput) {
-        imageInput.addEventListener('change', function() {
-            const file = this.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    if (eventFormImagePreview && eventFormImagePreviewContainer) {
-                        eventFormImagePreview.src = e.target.result;
-                        eventFormImagePreviewContainer.style.display = 'block';
-                    }
-                };
-                reader.readAsDataURL(file);
-            } else {
-                if (eventFormImagePreviewContainer && eventFormImagePreview) {
-                    if (!eventFormImagePreview.src.startsWith('http') && !eventFormImagePreview.src.startsWith('uploads/')) {
-                        eventFormImagePreviewContainer.style.display = 'none';
-                    }
-                }
-            }
-        });
-    }
-
     function showConfirm(title, message, onConfirm) {
         confirmTitle.textContent = title;
         confirmMessage.textContent = message;
@@ -733,35 +957,19 @@
         confirmCallback = null;
     }
 
-    if(confirmYes) confirmYes.addEventListener('click', () => {
-        if (confirmCallback) confirmCallback();
-        closeConfirm();
-    });
+    if (confirmYes) {
+        confirmYes.addEventListener('click', () => {
+            if (confirmCallback) confirmCallback();
+            closeConfirm();
+        });
+    }
 
-    if(confirmNo) confirmNo.addEventListener('click', closeConfirm);
-    if(confirmBackdrop) confirmBackdrop.addEventListener('click', closeConfirm);
+    if (confirmNo) confirmNo.addEventListener('click', closeConfirm);
+    if (confirmBackdrop) confirmBackdrop.addEventListener('click', closeConfirm);
 
     // ═════════════════════════════════════════════════════════
-    //  HELPERS
+    //  HELPER UTILITIES
     // ═════════════════════════════════════════════════════════
-    function clearFormMessages() {
-        if(!eventFormError) return;
-        eventFormError.style.display = 'none';
-        eventFormError.textContent = '';
-        eventFormSuccess.style.display = 'none';
-        eventFormSuccess.textContent = '';
-    }
-
-    function showFormError(msg) {
-        eventFormError.textContent = msg;
-        eventFormError.style.display = 'block';
-    }
-
-    function showFormSuccess(msg) {
-        eventFormSuccess.textContent = msg;
-        eventFormSuccess.style.display = 'block';
-    }
-
     function escapeHtml(str) {
         if (!str) return '';
         const div = document.createElement('div');
@@ -776,7 +984,7 @@
         return isNaN(date.getTime()) ? new Date(sqlDate) : date;
     }
 
-    // ─── Boot ───────────────────────────────────────────────
+    // ─── Boot App ───────────────────────────────────────────
     init();
 
 })();

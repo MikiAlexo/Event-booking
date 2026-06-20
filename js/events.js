@@ -503,10 +503,24 @@
     categoryCards.forEach(card => {
         card.addEventListener('click', () => {
             const type = card.dataset.type;
+            
+            // Clear other search parameters to perform a clean category filter
+            if (filterSearch) filterSearch.value = '';
+            if (filterLocation) filterLocation.value = '';
+            if (filterDateFrom) filterDateFrom.value = '';
+            if (filterDateTo) filterDateTo.value = '';
+            
+            // Reset active location pills to "For You"
+            const locationPills = document.querySelectorAll('.location-pill');
+            locationPills.forEach(p => p.classList.remove('active'));
+            const forYouPill = document.querySelector('.location-pill[data-location=""]');
+            if (forYouPill) forYouPill.classList.add('active');
+
             if (filterType) {
                 filterType.value = type;
             }
-            loadEvents(getFilterParams());
+            
+            loadEvents({ type: type });
             eventsGrid.scrollIntoView({ behavior: 'smooth', block: 'start' });
         });
     });
