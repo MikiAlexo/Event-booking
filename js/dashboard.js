@@ -607,53 +607,54 @@
         const dateObj = parseSQLDate(ev.event_date);
         const month   = dateObj.toLocaleString('en-US', { month: 'short' }).toUpperCase();
         const day     = dateObj.getDate();
-        const time    = dateObj.toLocaleString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
 
         const pct = ev.total_seats > 0
             ? Math.round(((ev.total_seats - ev.available_seats) / ev.total_seats) * 100)
             : 100;
 
-        const seatsClass = ev.available_seats <= 0 ? 'sold-out' : (pct >= 80 ? 'almost-full' : '');
-        const price = Number(ev.ticket_price) > 0 ? `${Number(ev.ticket_price).toFixed(2)} ETB` : 'FREE';
+        const price = Number(ev.ticket_price) > 0 ? `${Math.round(ev.ticket_price)} Birr` : 'FREE';
 
-        // Saved cards start in the Saved state: Stub hidden, Stamp visible
         card.innerHTML = `
-            <div class="event-card__date-badge">
-                <span class="event-card__month">${month}</span>
-                <span class="event-card__day">${day}</span>
-            </div>
-            <div class="event-card__body">
-                <div style="margin-bottom: 0.5rem;">
-                    <span class="event-card__type">${escapeHtml(ev.event_type)}</span>
-                </div>
-                <h3 class="event-card__title">${escapeHtml(ev.title)}</h3>
-                <p class="event-card__time">${time} • ${escapeHtml(ev.location || 'Online')}</p>
+            <div class="event-card__image-section">
                 ${ev.image_path 
-                    ? `<div class="event-card__image-container"><img src="${escapeHtml(ev.image_path)}" alt="${escapeHtml(ev.title)}" class="event-card__image"></div>`
-                    : `<div class="event-card__image-container event-card__image-fallback"></div>`
+                    ? `<img src="${escapeHtml(ev.image_path)}" alt="${escapeHtml(ev.title)}" class="event-card__img">`
+                    : `<div class="event-card__img-fallback">
+                         <svg viewBox="0 0 24 24" width="36" height="36" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                       </div>`
                 }
-                <div class="event-card__footer">
-                    <span style="font-weight:bold; color:var(--color-primary);">${price}</span>
-                    <span class="event-card__seats ${seatsClass}">${ev.available_seats <= 0 ? 'Waitlist Available' : ev.available_seats + ' seats left'}</span>
+                <div class="event-card__overlay-top-left">
+                    <span class="category-pill">${escapeHtml(ev.event_type)}</span>
+                </div>
+                <button class="event-card__heart-btn saved" title="Unsave Event">
+                    <svg class="heart-icon" viewBox="0 0 24 24" fill="#D4AF37" stroke="#D4AF37" stroke-width="2">
+                        <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                    </svg>
+                </button>
+                <div class="event-card__overlay-bottom">
+                    <span class="info-badge">
+                        <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                        <span>${month} ${day}</span>
+                    </span>
+                    <span class="info-badge">
+                        <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a8 8 0 0 0-8 8c0 5.25 8 12 8 12s8-6.75 8-12a8 8 0 0 0-8-8z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+                        <span>${escapeHtml(ev.location || 'Online')}</span>
+                    </span>
                 </div>
             </div>
-            <div class="ticket-stub hidden-stub" title="Save Event">
-                <div class="ticket-stub__content">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="0"></rect><path d="M3 10a2 2 0 0 1 0 4M21 10a2 2 0 0 0 0 4"></path></svg>
-                    <span class="ticket-stub__text">KEEP</span>
-                </div>
-            </div>
-            <div class="ticket-stamp" title="Unsave Event">
-                <div class="ticket-stamp__content">
-                    <span class="ticket-stamp__text">KEPT</span>
+            <div class="event-card__body-section">
+                <h3 class="event-card__title" title="${escapeHtml(ev.title)}">${escapeHtml(ev.title)}</h3>
+                <div class="event-card__footer-section">
+                    <div class="event-card__price-box">
+                        <span class="price-from-label">From</span>
+                        <span class="price-amount">${price}</span>
+                    </div>
+                    <button class="event-card__ticket-btn">${ev.available_seats <= 0 ? 'Waitlist' : 'Get Ticket'}</button>
                 </div>
             </div>
         `;
 
-        const stubElement = card.querySelector('.ticket-stub');
-        const stampElement = card.querySelector('.ticket-stamp');
-
-        stampElement.addEventListener('click', async (e) => {
+        const heartBtn = card.querySelector('.event-card__heart-btn');
+        heartBtn.addEventListener('click', async (e) => {
             e.stopPropagation();
             try {
                 const res = await fetch(`${API_EVENTS}?action=unsave`, {
@@ -662,17 +663,13 @@
                     body: JSON.stringify({ event_id: ev.id })
                 });
                 if(res.ok) {
-                    // Flash the card border
-                    card.classList.add('flash-active');
-                    
-                    // Animate stamp going away and ticket stub sliding back up
-                    stampElement.classList.add('hidden-stub');
-                    stubElement.classList.remove('hidden-stub');
-                    stubElement.classList.add('restoring');
-                    
-                    // Wait for the animation before reloading list
+                    card.classList.add('fade-out');
                     setTimeout(() => {
-                        loadSavedEvents();
+                        card.remove();
+                        const remaining = savedEventsList.querySelectorAll('.event-card').length;
+                        if (remaining === 0) {
+                            savedEventsEmpty.classList.remove('hidden');
+                        }
                     }, 300);
                 }
             } catch(e) {}

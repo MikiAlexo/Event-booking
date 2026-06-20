@@ -146,113 +146,84 @@
         const isSaved = savedEventsIds.includes(ev.id);
 
         card.innerHTML = `
-            <div class="event-card__date-badge">
-                <span class="event-card__month">${month}</span>
-                <span class="event-card__day">${day}</span>
-            </div>
-            <div class="event-card__body">
-                <div style="margin-bottom: 0.5rem;">
-                    <span class="event-card__type">${escapeHtml(ev.event_type)}</span>
-                </div>
-                <h3 class="event-card__title">${escapeHtml(ev.title)}</h3>
-                <p class="event-card__time">${time} • ${escapeHtml(ev.location || 'Online')}</p>
-                <p class="event-card__host">by ${escapeHtml(ev.creator_name)}</p>
+            <div class="event-card__image-section">
                 ${ev.image_path 
-                    ? `<div class="event-card__image-container"><img src="${escapeHtml(ev.image_path)}" alt="${escapeHtml(ev.title)}" class="event-card__image"></div>`
-                    : `<div class="event-card__image-container event-card__image-fallback"></div>`
+                    ? `<img src="${escapeHtml(ev.image_path)}" alt="${escapeHtml(ev.title)}" class="event-card__img">`
+                    : `<div class="event-card__img-fallback">
+                         <svg viewBox="0 0 24 24" width="36" height="36" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                       </div>`
                 }
-                <div class="event-card__footer">
-                    <span style="font-weight:bold; color:var(--color-primary);">${price}</span>
-                    <span class="event-card__seats ${seatsClass}">
-                        ${ev.available_seats <= 0 ? 'Waitlist Available' : ev.available_seats + ' seats left'}
+                <div class="event-card__overlay-top-left">
+                    <span class="category-pill">${escapeHtml(ev.event_type)}</span>
+                </div>
+                <button class="event-card__heart-btn ${isSaved ? 'saved' : ''}" title="${isSaved ? 'Unsave Event' : 'Save Event'}">
+                    <svg class="heart-icon" viewBox="0 0 24 24" fill="${isSaved ? '#D4AF37' : 'none'}" stroke="${isSaved ? '#D4AF37' : '#0B0F19'}" stroke-width="2">
+                        <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                    </svg>
+                </button>
+                <div class="event-card__overlay-bottom">
+                    <span class="info-badge">
+                        <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                        <span>${month} ${day}</span>
                     </span>
-                    <button class="btn btn--sm btn--primary event-card__view-btn"><span>View</span></button>
+                    <span class="info-badge">
+                        <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a8 8 0 0 0-8 8c0 5.25 8 12 8 12s8-6.75 8-12a8 8 0 0 0-8-8z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+                        <span>${escapeHtml(ev.location || 'Online')}</span>
+                    </span>
                 </div>
             </div>
-            <div class="ticket-stub ${isSaved ? 'hidden-stub' : ''}" title="Save Event">
-                <div class="ticket-stub__content">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="0"></rect><path d="M3 10a2 2 0 0 1 0 4M21 10a2 2 0 0 0 0 4"></path></svg>
-                    <span class="ticket-stub__text">KEEP</span>
-                </div>
-            </div>
-            <div class="ticket-stamp ${isSaved ? '' : 'hidden-stub'}" title="Unsave Event">
-                <div class="ticket-stamp__content">
-                    <span class="ticket-stamp__text">KEPT</span>
+            <div class="event-card__body-section">
+                <h3 class="event-card__title" title="${escapeHtml(ev.title)}">${escapeHtml(ev.title)}</h3>
+                <div class="event-card__footer-section">
+                    <div class="event-card__price-box">
+                        <span class="price-from-label">From</span>
+                        <span class="price-amount">${price}</span>
+                    </div>
+                    <button class="event-card__ticket-btn">${ev.available_seats <= 0 ? 'Waitlist' : 'Get Ticket'}</button>
                 </div>
             </div>
         `;
 
-        card.querySelector('.event-card__view-btn').addEventListener('click', () => openModal(ev));
-        
-        const stubElement = card.querySelector('.ticket-stub');
-        const stampElement = card.querySelector('.ticket-stamp');
-
-        // Ticket Rip Click Handler
-        stubElement.addEventListener('click', async (e) => {
-            e.stopPropagation();
-            if (!currentUser) {
-                window.location.href = 'auth.html';
-                return;
-            }
-            try {
-                const res = await fetch(`${API_EVENTS}?action=save`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ event_id: ev.id })
-                });
-                if(res.ok) {
-                    if (!savedEventsIds.includes(ev.id)) {
-                        savedEventsIds.push(ev.id);
-                    }
-                    updateModalStateIfSelected(ev.id, true);
-
-                    stubElement.classList.add('ripping');
-                    setTimeout(() => {
-                        stubElement.classList.remove('ripping');
-                        stubElement.classList.add('hidden-stub');
-                        
-                        stampElement.classList.remove('hidden-stub');
-                        stampElement.classList.add('entering');
-                        
-                        setTimeout(() => {
-                            stampElement.classList.remove('entering');
-                        }, 150);
-                    }, 250);
-                }
-            } catch(e) {}
+        // Click card body or button to open modal
+        card.addEventListener('click', (e) => {
+            if (e.target.closest('.event-card__heart-btn')) return;
+            openModal(ev);
         });
 
-        // Ticket Stamp Unsave Handler
-        stampElement.addEventListener('click', async (e) => {
+        const heartBtn = card.querySelector('.event-card__heart-btn');
+        heartBtn.addEventListener('click', async (e) => {
             e.stopPropagation();
             if (!currentUser) {
                 window.location.href = 'auth.html';
                 return;
             }
+            const currentSaved = savedEventsIds.includes(ev.id);
+            const action = currentSaved ? 'unsave' : 'save';
+            heartBtn.disabled = true;
             try {
-                const res = await fetch(`${API_EVENTS}?action=unsave`, {
+                const res = await fetch(`${API_EVENTS}?action=${action}`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ event_id: ev.id })
                 });
                 if(res.ok) {
-                    savedEventsIds = savedEventsIds.filter(id => id !== ev.id);
-                    updateModalStateIfSelected(ev.id, false);
-
-                    card.classList.add('flash-active');
-                    setTimeout(() => {
-                        card.classList.remove('flash-active');
-                    }, 300);
-
-                    stampElement.classList.add('hidden-stub');
-                    stubElement.classList.remove('hidden-stub');
-                    stubElement.classList.add('restoring');
-                    
-                    setTimeout(() => {
-                        stubElement.classList.remove('restoring');
-                    }, 300);
+                    if (currentSaved) {
+                        savedEventsIds = savedEventsIds.filter(id => id !== ev.id);
+                        heartBtn.classList.remove('saved');
+                        heartBtn.querySelector('svg').setAttribute('fill', 'none');
+                        heartBtn.querySelector('svg').setAttribute('stroke', '#0B0F19');
+                    } else {
+                        savedEventsIds.push(ev.id);
+                        heartBtn.classList.add('saved');
+                        heartBtn.querySelector('svg').setAttribute('fill', '#D4AF37');
+                        heartBtn.querySelector('svg').setAttribute('stroke', '#D4AF37');
+                    }
+                    updateModalStateIfSelected(ev.id, !currentSaved);
                 }
-            } catch(e) {}
+            } catch(e) {
+            } finally {
+                heartBtn.disabled = false;
+            }
         });
 
         return card;
@@ -439,15 +410,16 @@
                     
                     const card = document.querySelector(`.event-card[data-id="${selectedEventId}"]`);
                     if (card) {
-                        const stubElement = card.querySelector('.ticket-stub');
-                        const stampElement = card.querySelector('.ticket-stamp');
-                        if (stubElement && stampElement) {
+                        const heartBtn = card.querySelector('.event-card__heart-btn');
+                        if (heartBtn) {
                             if (isNowSaved) {
-                                stubElement.classList.add('hidden-stub');
-                                stampElement.classList.remove('hidden-stub');
+                                heartBtn.classList.add('saved');
+                                heartBtn.querySelector('svg').setAttribute('fill', '#D4AF37');
+                                heartBtn.querySelector('svg').setAttribute('stroke', '#D4AF37');
                             } else {
-                                stampElement.classList.add('hidden-stub');
-                                stubElement.classList.remove('hidden-stub');
+                                heartBtn.classList.remove('saved');
+                                heartBtn.querySelector('svg').setAttribute('fill', 'none');
+                                heartBtn.querySelector('svg').setAttribute('stroke', '#0B0F19');
                             }
                         }
                     }
@@ -498,6 +470,46 @@
             if (e.key === 'Enter') loadEvents(getFilterParams());
         });
     }
+
+    // Setup carousel scroll handlers
+    const eventsPrev = document.getElementById('events-prev');
+    const eventsNext = document.getElementById('events-next');
+    if (eventsPrev && eventsNext && eventsGrid) {
+        eventsPrev.addEventListener('click', () => {
+            eventsGrid.scrollBy({ left: -360, behavior: 'smooth' });
+        });
+        eventsNext.addEventListener('click', () => {
+            eventsGrid.scrollBy({ left: 360, behavior: 'smooth' });
+        });
+    }
+
+    // Setup location pills filter
+    const locationPills = document.querySelectorAll('.location-pill');
+    locationPills.forEach(pill => {
+        pill.addEventListener('click', () => {
+            locationPills.forEach(p => p.classList.remove('active'));
+            pill.classList.add('active');
+            
+            const loc = pill.dataset.location;
+            if (filterLocation) {
+                filterLocation.value = loc;
+            }
+            loadEvents(getFilterParams());
+        });
+    });
+
+    // Setup category cards filter
+    const categoryCards = document.querySelectorAll('.category-card');
+    categoryCards.forEach(card => {
+        card.addEventListener('click', () => {
+            const type = card.dataset.type;
+            if (filterType) {
+                filterType.value = type;
+            }
+            loadEvents(getFilterParams());
+            eventsGrid.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+    });
 
     // ─── Utility ────────────────────────────────────────────
     function escapeHtml(str) {
