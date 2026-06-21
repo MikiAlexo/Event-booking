@@ -278,14 +278,21 @@ if ($method === 'POST') {
     $title       = trim($data['title'] ?? '');
     $description = trim($data['description'] ?? '');
     $eventDate   = trim($data['event_date'] ?? '');
+    $endTime     = trim($data['end_time'] ?? '');
     $eventType   = trim($data['event_type'] ?? '');
     $location    = trim($data['location'] ?? 'Online');
     $ticketPrice = (float) ($data['ticket_price'] ?? 0);
     $totalSeats  = (int) ($data['total_seats'] ?? 0);
 
-    if ($title === '' || $eventDate === '' || $eventType === '' || $totalSeats < 1) {
+    if ($title === '' || $eventDate === '' || $endTime === '' || $eventType === '' || $totalSeats < 1) {
         http_response_code(400);
-        echo json_encode(['error' => 'Title, date, type, and seats (≥1) are required.']);
+        echo json_encode(['error' => 'Title, start date, end date, type, and seats (≥1) are required.']);
+        exit;
+    }
+
+    if (strtotime($endTime) <= strtotime($eventDate)) {
+        http_response_code(400);
+        echo json_encode(['error' => 'End time must be after the start time.']);
         exit;
     }
 
@@ -293,10 +300,10 @@ if ($method === 'POST') {
     $imagePath = handleImageUpload();
 
     $stmt = $mysqli->prepare('
-        INSERT INTO events (creator_id, title, description, event_date, event_type, location, ticket_price, total_seats, available_seats, image_path)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO events (creator_id, title, description, event_date, end_time, event_type, location, ticket_price, total_seats, available_seats, image_path)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ');
-    $stmt->bind_param('isssssdiis', $userId, $title, $description, $eventDate, $eventType, $location, $ticketPrice, $totalSeats, $totalSeats, $imagePath);
+    $stmt->bind_param('issssssdiis', $userId, $title, $description, $eventDate, $endTime, $eventType, $location, $ticketPrice, $totalSeats, $totalSeats, $imagePath);
     $stmt->execute();
 
     $newId = (int) $mysqli->insert_id;
@@ -309,6 +316,7 @@ if ($method === 'POST') {
             'title'           => $title,
             'description'     => $description,
             'event_date'      => $eventDate,
+            'end_time'        => $endTime,
             'event_type'      => $eventType,
             'location'        => $location,
             'ticket_price'    => $ticketPrice,
@@ -334,14 +342,21 @@ if ($method === 'PUT') {
     $title       = trim($data['title'] ?? '');
     $description = trim($data['description'] ?? '');
     $eventDate   = trim($data['event_date'] ?? '');
+    $endTime     = trim($data['end_time'] ?? '');
     $eventType   = trim($data['event_type'] ?? '');
     $location    = trim($data['location'] ?? 'Online');
     $ticketPrice = (float) ($data['ticket_price'] ?? 0);
     $totalSeats  = (int) ($data['total_seats'] ?? 0);
 
-    if ($eventId < 1 || $title === '' || $eventDate === '' || $eventType === '' || $totalSeats < 1) {
+    if ($eventId < 1 || $title === '' || $eventDate === '' || $endTime === '' || $eventType === '' || $totalSeats < 1) {
         http_response_code(400);
-        echo json_encode(['error' => 'All fields are required for an update.']);
+        echo json_encode(['error' => 'All fields (including end time) are required for an update.']);
+        exit;
+    }
+
+    if (strtotime($endTime) <= strtotime($eventDate)) {
+        http_response_code(400);
+        echo json_encode(['error' => 'End time must be after the start time.']);
         exit;
     }
 
@@ -384,10 +399,10 @@ if ($method === 'PUT') {
 
     $stmt = $mysqli->prepare('
         UPDATE events
-        SET title = ?, description = ?, event_date = ?, event_type = ?, location = ?, ticket_price = ?, total_seats = ?, available_seats = ?, image_path = ?
+        SET title = ?, description = ?, event_date = ?, end_time = ?, event_type = ?, location = ?, ticket_price = ?, total_seats = ?, available_seats = ?, image_path = ?
         WHERE id = ?
     ');
-    $stmt->bind_param('sssssdiiis', $title, $description, $eventDate, $eventType, $location, $ticketPrice, $totalSeats, $newAvailable, $imagePath, $eventId);
+    $stmt->bind_param('ssssssdiiisi', $title, $description, $eventDate, $endTime, $eventType, $location, $ticketPrice, $totalSeats, $newAvailable, $imagePath, $eventId);
     $stmt->execute();
 
     echo json_encode(['success' => true]);

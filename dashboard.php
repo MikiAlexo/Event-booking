@@ -1,3 +1,142 @@
+<?php
+session_start();
+if (!isset($_SESSION['user_id'])) {
+    header('Location: auth.html');
+    exit;
+}
+require_once __DIR__ . '/api/db.php';
+$mysqli = getDBConnection();
+$userId = (int) $_SESSION['user_id'];
+
+// Get user info (like balance and name) to display in the header bar and greetings
+$stmt = $mysqli->prepare('SELECT full_name, balance FROM users WHERE id = ?');
+$stmt->bind_param('i', $userId);
+$stmt->execute();
+$userRes = $stmt->get_result()->fetch_assoc();
+$fullName = $userRes ? $userRes['full_name'] : $_SESSION['user_name'];
+$balance = $userRes ? $userRes['balance'] : $_SESSION['user_balance'];
+
+// Query 1: Total Earnings (from ticket price * tickets sold)
+$stmt = $mysqli->prepare('
+    SELECT COALESCE(SUM(e.ticket_price), 0) AS total_earnings, COUNT(b.id) AS tickets_sold
+    FROM bookings b
+    JOIN events e ON b.event_id = e.id
+    WHERE e.creator_id = ? AND b.status = "active"
+');
+$stmt->bind_param('i', $userId);
+$stmt->execute();
+$stats = $stmt->get_result()->fetch_assoc();
+$totalEarnings = (float) $stats['total_earnings'];
+$totalTicketsSold = (int) $stats['tickets_sold'];
+
+// Query 2: Number of Upcoming Events managed by this creator
+$stmt = $mysqli->prepare('
+    SELECT COUNT(*) AS upcoming_count
+    FROM events
+    WHERE creator_id = ? AND event_date >= NOW()
+');
+$stmt->bind_param('i', $userId);
+$stmt->execute();
+$upcomingCount = (int) $stmt->get_result()->fetch_assoc()['upcoming_count'];
+
+// Query 3: Revenue grouped by day for the last 7 days
+$stmt = $mysqli->prepare("
+    SELECT DATE(b.booking_date) as booking_day, COALESCE(SUM(e.ticket_price), 0) as daily_revenue
+    FROM bookings b
+    JOIN events e ON b.event_id = e.id
+    WHERE e.creator_id = ? AND b.status = 'active' AND b.booking_date >= DATE_SUB(CURDATE(), INTERVAL 6 DAY)
+    GROUP BY DATE(b.booking_date)
+    ORDER BY booking_day ASC
+");
+$stmt->bind_param('i', $userId);
+$stmt->execute();
+$chartRows = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+
+// Fill in missing days for the last 7 days to make the line chart complete and beautiful
+$chartData = [];
+for ($i = 6; $i >= 0; $i--) {
+    $dateStr = date('Y-m-d', strtotime("-$i days"));
+    $revenue = 0.0;
+    foreach ($chartRows as $row) {
+        if ($row['booking_day'] === $dateStr) {
+            $revenue = (float) $row['daily_revenue'];
+            break;
+        }
+    }
+    $chartData[date('M d', strtotime("-$i days"))] = $revenue;
+}
+
+// Query 4: 5 most recent bookings for events managed by the host
+$stmt = $mysqli->prepare('
+    SELECT b.booking_date, u.full_name AS attendee_name, e.title AS event_title, e.ticket_price
+    FROM bookings b
+    JOIN events e ON b.event_id = e.id
+    JOIN users u ON b.user_id = u.id
+    WHERE e.creator_id = ? AND b.status = "active"
+    ORDER BY b.booking_date DESC
+    LIMIT 5
+');
+$stmt->bind_param('i', $userId);
+$stmt->execute();
+$recentBookings = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+
+// Query 5: Find the single event belonging to this host with the closest start time in the future.
+$stmt = $mysqli->prepare('
+    SELECT *
+    FROM events
+    WHERE creator_id = ? AND event_date >= NOW()
+    ORDER BY event_date ASC
+    LIMIT 1
+');
+$stmt->bind_param('i', $userId);
+$stmt->execute();
+$nextEvent = $stmt->get_result()->fetch_assoc();
+
+$nextEventBookingsCount = 0;
+if ($nextEvent) {
+    $stmt = $mysqli->prepare('SELECT COUNT(*) AS booked FROM bookings WHERE event_id = ? AND status = "active"');
+    $stmt->bind_param('i', $nextEvent['id']);
+    $stmt->execute();
+    $nextEventBookingsCount = (int) $stmt->get_result()->fetch_assoc()['booked'];
+}
+
+// Query 6: Notifications background checks
+$stmt = $mysqli->prepare('
+    SELECT e.id, e.title, e.total_seats, (e.total_seats - e.available_seats) as booked_seats
+    FROM events e
+    WHERE e.creator_id = ? AND e.event_date >= NOW()
+');
+$stmt->bind_param('i', $userId);
+$stmt->execute();
+$activeEvents = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+
+$notifications = [];
+foreach ($activeEvents as $ev) {
+    if ($ev['total_seats'] > 0) {
+        $pct = ($ev['booked_seats'] / $ev['total_seats']) * 100;
+        if ($pct >= 90.0) {
+            $notifications[] = htmlspecialchars($ev['title']) . " is almost sold out.";
+        }
+    }
+}
+
+// Condition 2: Query waitlist table
+$stmt = $mysqli->prepare('
+    SELECT e.title, COUNT(w.id) AS wait_count
+    FROM waitlist w
+    JOIN events e ON w.event_id = e.id
+    WHERE e.creator_id = ?
+    GROUP BY w.event_id
+');
+$stmt->bind_param('i', $userId);
+$stmt->execute();
+$waitlistItems = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+foreach ($waitlistItems as $wi) {
+    if ($wi['wait_count'] > 0) {
+        $notifications[] = $wi['wait_count'] . " people are on the waitlist for " . htmlspecialchars($wi['title']) . ".";
+    }
+}
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -9,6 +148,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
 
@@ -72,12 +212,12 @@
                     <svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
                 </button>
                 <div class="header-bar__left">
-                    <span id="nav-user-name" class="navbar__greeting"></span>
+                    <span id="nav-user-name" class="navbar__greeting">Welcome back, <?= htmlspecialchars($fullName) ?>!</span>
                 </div>
                 <div class="header-bar__right">
                     <div class="header-balance">
                         <span class="header-balance__title">Balance</span>
-                        <span id="nav-balance" class="header-balance__amount">0.00 Birr</span>
+                        <span id="nav-balance" class="header-balance__amount"><?= number_format($balance, 2) ?> Birr</span>
                     </div>
                 </div>
             </header>
@@ -96,7 +236,7 @@
                                 <svg class="svg-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
                             </div>
                             <div class="analytics-card__content">
-                                <span class="analytics-card__value" id="stats-revenue">0.00 Birr</span>
+                                <span class="analytics-card__value" id="stats-revenue"><?= number_format($totalEarnings, 2) ?> Birr</span>
                                 <span class="analytics-card__label">Total Earnings</span>
                             </div>
                         </div>
@@ -105,7 +245,7 @@
                                 <svg class="svg-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
                             </div>
                             <div class="analytics-card__content">
-                                <span class="analytics-card__value" id="stats-tickets-sold">0</span>
+                                <span class="analytics-card__value" id="stats-tickets-sold"><?= $totalTicketsSold ?></span>
                                 <span class="analytics-card__label">Tickets Sold</span>
                             </div>
                         </div>
@@ -114,15 +254,110 @@
                                 <svg class="svg-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
                             </div>
                             <div class="analytics-card__content">
-                                <span class="analytics-card__value" id="stats-events-count">0</span>
+                                <span class="analytics-card__value" id="stats-events-count"><?= $upcomingCount ?></span>
                                 <span class="analytics-card__label">Upcoming Events</span>
                             </div>
                         </div>
                     </div>
 
-                    <div class="welcome-widget">
-                        <div class="welcome-widget__greeting">Welcome to your dashboard!</div>
-                        <p class="welcome-widget__text">Configure your events, track earnings in Birr, monitor seat capacity, and check-in attendees easily. Click on "My Events" to manage bookings.</p>
+                    <div class="overview-grid">
+                        <!-- Left Column (60%) -->
+                        <div class="overview-grid__left">
+                            <!-- Revenue Chart Card -->
+                            <div class="card overview-card">
+                                <h3 class="overview-card__title">Revenue Overview</h3>
+                                <div class="chart-container" style="position: relative; height:250px; width:100%;">
+                                    <canvas id="revenueChart"></canvas>
+                                </div>
+                            </div>
+                            
+                            <!-- Recent Bookings Table Card -->
+                            <div class="card overview-card">
+                                <h3 class="overview-card__title">Recent Ticket Sales</h3>
+                                <div class="table-responsive">
+                                    <table class="overview-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Attendee Name</th>
+                                                <th>Event Name</th>
+                                                <th>Price</th>
+                                                <th>Booking Date</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <?php if (empty($recentBookings)): ?>
+                                                <tr>
+                                                    <td colspan="4" class="text-muted text-center" style="padding: 2rem 1rem;">No recent ticket sales.</td>
+                                                </tr>
+                                            <?php else: ?>
+                                                <?php foreach ($recentBookings as $booking): ?>
+                                                    <tr>
+                                                        <td><?= htmlspecialchars($booking['attendee_name']) ?></td>
+                                                        <td><?= htmlspecialchars($booking['event_title']) ?></td>
+                                                        <td class="gold-text"><?= number_format($booking['ticket_price'], 2) ?> Birr</td>
+                                                        <td><?= date('M d, Y h:i A', strtotime($booking['booking_date'])) ?></td>
+                                                    </tr>
+                                                <?php endforeach; ?>
+                                            <?php endif; ?>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Right Column (40%) -->
+                        <div class="overview-grid__right">
+                            <!-- Next Event Highlight Card -->
+                            <div class="card overview-card next-event-card">
+                                <h3 class="overview-card__title">Next Event Highlight</h3>
+                                <?php if (!$nextEvent): ?>
+                                    <p class="text-muted text-center" style="padding: 2rem 1rem;">No upcoming events scheduled.</p>
+                                <?php else: 
+                                    $nextEventTitle = htmlspecialchars($nextEvent['title']);
+                                    $nextEventImg = !empty($nextEvent['image_path']) ? htmlspecialchars($nextEvent['image_path']) : 'uploads/hero_concert.png';
+                                    $nextEventDate = date('M d, Y \a\t h:i A', strtotime($nextEvent['event_date']));
+                                    $nextEventTotal = (int) $nextEvent['total_seats'];
+                                    $nextEventBooked = $nextEventBookingsCount;
+                                    $nextEventPct = $nextEventTotal > 0 ? min(100, round(($nextEventBooked / $nextEventTotal) * 100)) : 0;
+                                ?>
+                                    <div class="next-event-widget">
+                                        <div class="next-event-widget__meta">
+                                            <img src="<?= $nextEventImg ?>" alt="<?= $nextEventTitle ?>" class="next-event-widget__img">
+                                            <div class="next-event-widget__details">
+                                                <h4 class="next-event-widget__title"><?= $nextEventTitle ?></h4>
+                                                <p class="next-event-widget__date"><?= $nextEventDate ?></p>
+                                            </div>
+                                        </div>
+                                        <div class="next-event-widget__capacity">
+                                            <div class="capacity-labels">
+                                                <span>Tickets Sold</span>
+                                                <span class="gold-text"><?= $nextEventBooked ?> / <?= $nextEventTotal ?></span>
+                                            </div>
+                                            <div class="progress-bar-container">
+                                                <div class="progress-bar-fill" style="width: <?= $nextEventPct ?>%;"></div>
+                                            </div>
+                                        </div>
+                                        <button class="btn btn--primary next-event-widget__btn" onclick="goToManageEvent(<?= $nextEvent['id'] ?>)">
+                                            <span>Manage Check-ins</span>
+                                        </button>
+                                    </div>
+                                <?php endif; ?>
+                            </div>
+                            
+                            <!-- Notifications Card -->
+                            <div class="card overview-card">
+                                <h3 class="overview-card__title">Notifications</h3>
+                                <?php if (empty($notifications)): ?>
+                                    <p class="text-muted">No new notifications.</p>
+                                <?php else: ?>
+                                    <ul class="notifications-list">
+                                        <?php foreach ($notifications as $notification): ?>
+                                            <li><?= $notification ?></li>
+                                        <?php endforeach; ?>
+                                    </ul>
+                                <?php endif; ?>
+                            </div>
+                        </div>
                     </div>
                 </section>
 
@@ -183,12 +418,21 @@
                             </div>
                             <div class="form-row">
                                 <div class="form-group">
-                                    <label for="event-form-date">Event Date &amp; Time</label>
+                                    <label for="event-form-date">Start Date &amp; Time</label>
                                     <input type="datetime-local" id="event-form-date" class="input" required>
                                 </div>
                                 <div class="form-group">
+                                    <label for="event-form-end-date">End Date &amp; Time</label>
+                                    <input type="datetime-local" id="event-form-end-date" class="input" required>
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
                                     <label for="event-form-seats">Total Seats</label>
                                     <input type="number" id="event-form-seats" class="input" min="1" placeholder="e.g. 100" required>
+                                </div>
+                                <div class="form-group">
+                                    <!-- Spacer column for layout alignment -->
                                 </div>
                             </div>
                             <div class="form-row">
@@ -359,5 +603,82 @@
 
     <script src="js/p3r-dropdown.js"></script>
     <script src="js/dashboard.js?v=1.0.3"></script>
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const canvas = document.getElementById('revenueChart');
+        if (canvas) {
+            const ctx = canvas.getContext('2d');
+            const chartLabels = <?= json_encode(array_keys($chartData)) ?>;
+            const chartValues = <?= json_encode(array_values($chartData)) ?>;
+            
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: chartLabels,
+                    datasets: [{
+                        label: 'Daily Revenue (Birr)',
+                        data: chartValues,
+                        borderColor: '#D4AF37', // Gold
+                        backgroundColor: 'rgba(212, 175, 55, 0.08)',
+                        borderWidth: 2.5,
+                        fill: true,
+                        tension: 0.3,
+                        pointBackgroundColor: '#D4AF37',
+                        pointBorderColor: '#FFFFFF',
+                        pointBorderWidth: 1.5,
+                        pointRadius: 4,
+                        pointHoverRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return context.parsed.y.toFixed(2) + ' Birr';
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: {
+                                color: 'rgba(226, 232, 240, 0.5)'
+                            },
+                            ticks: {
+                                color: '#64748B',
+                                font: {
+                                    family: 'Poppins, sans-serif',
+                                    size: 11
+                                },
+                                callback: function(value) {
+                                    return value + ' Br';
+                                }
+                            }
+                        },
+                        x: {
+                            grid: {
+                                display: false
+                            },
+                            ticks: {
+                                color: '#64748B',
+                                font: {
+                                    family: 'Poppins, sans-serif',
+                                    size: 11
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+    });
+    </script>
 </body>
 </html>

@@ -34,6 +34,7 @@
     const eventFormName    = document.getElementById('event-form-name');
     const eventFormType    = document.getElementById('event-form-type');
     const eventFormDate    = document.getElementById('event-form-date');
+    const eventFormEndDate = document.getElementById('event-form-end-date');
     const eventFormSeats   = document.getElementById('event-form-seats');
     const eventFormLocation = document.getElementById('event-form-location');
     const eventFormPrice   = document.getElementById('event-form-price');
@@ -379,6 +380,7 @@
             eventFormType.dispatchEvent(new Event('change'));
         }
         if (eventFormDate) eventFormDate.value = '';
+        if (eventFormEndDate) eventFormEndDate.value = '';
         if (eventFormSeats) eventFormSeats.value = '';
         if (eventFormLocation) eventFormLocation.value = '';
         if (eventFormPrice) eventFormPrice.value = '';
@@ -409,13 +411,19 @@
             const title        = eventFormName.value.trim();
             const event_type   = eventFormType.value;
             const event_date   = eventFormDate.value;
+            const end_time     = eventFormEndDate.value;
             const location     = eventFormLocation.value.trim() || 'Online';
             const ticket_price = parseFloat(eventFormPrice.value) || 0;
             const total_seats  = parseInt(eventFormSeats.value, 10);
             const description  = eventFormDesc.value.trim();
 
-            if (!title || !event_type || !event_date || total_seats < 1) {
+            if (!title || !event_type || !event_date || !end_time || total_seats < 1) {
                 showFormError('Please fill in all required fields.');
+                return;
+            }
+
+            if (new Date(end_time) <= new Date(event_date)) {
+                showFormError('End time must be after the start time.');
                 return;
             }
 
@@ -423,6 +431,7 @@
             formData.append('title', title);
             formData.append('event_type', event_type);
             formData.append('event_date', event_date);
+            formData.append('end_time', end_time);
             formData.append('location', location);
             formData.append('ticket_price', ticket_price);
             formData.append('total_seats', total_seats);
@@ -506,6 +515,18 @@
         const h  = String(dt.getHours()).padStart(2, '0');
         const mi = String(dt.getMinutes()).padStart(2, '0');
         eventFormDate.value = `${y}-${m}-${d}T${h}:${mi}`;
+
+        if (ev.end_time) {
+            const edt = parseSQLDate(ev.end_time);
+            const ey  = edt.getFullYear();
+            const em  = String(edt.getMonth() + 1).padStart(2, '0');
+            const ed  = String(edt.getDate()).padStart(2, '0');
+            const eh  = String(edt.getHours()).padStart(2, '0');
+            const emi = String(edt.getMinutes()).padStart(2, '0');
+            eventFormEndDate.value = `${ey}-${em}-${ed}T${eh}:${emi}`;
+        } else {
+            eventFormEndDate.value = '';
+        }
 
         if (ev.image_path) {
             if (eventFormImagePreview && eventFormImagePreviewContainer && uploadZonePrompt) {
@@ -986,5 +1007,19 @@
 
     // ─── Boot App ───────────────────────────────────────────
     init();
+
+    // Export function to navigate and load event management/check-in
+    async function goToManageEvent(eventId) {
+        try {
+            const res = await fetch(`${API_EVENTS}?id=${eventId}`);
+            if (!res.ok) throw new Error('Failed to fetch event details');
+            const event = await res.json();
+            showCheckInView(event);
+        } catch (err) {
+            console.error(err);
+            alert('Error loading event for check-in: ' + err.message);
+        }
+    }
+    window.goToManageEvent = goToManageEvent;
 
 })();

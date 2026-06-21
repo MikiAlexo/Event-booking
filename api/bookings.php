@@ -289,7 +289,7 @@ switch ($action) {
 
         $stmt = $mysqli->prepare('
             SELECT b.id AS booking_id, b.booking_date, b.status, b.checked_in,
-                   e.id AS event_id, e.title, e.event_date, e.event_type, e.location,
+                   e.id AS event_id, e.title, e.event_date, e.end_time, e.event_type, e.location,
                    e.total_seats, e.available_seats, e.ticket_price
             FROM bookings b
             JOIN events e ON e.id = b.event_id
@@ -304,7 +304,7 @@ switch ($action) {
         // Also fetch waitlist items
         $wStmt = $mysqli->prepare('
             SELECT w.id AS waitlist_id, w.joined_at,
-                   e.id AS event_id, e.title, e.event_date, e.event_type, e.location,
+                   e.id AS event_id, e.title, e.event_date, e.end_time, e.event_type, e.location,
                    e.total_seats, e.available_seats, e.ticket_price
             FROM waitlist w
             JOIN events e ON e.id = w.event_id
