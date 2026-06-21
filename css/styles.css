@@ -290,7 +290,7 @@ h1, h2, h3, h4, h5, h6 {
     align-items: center;
     padding: 0.6rem 0.6rem 0.6rem 2rem;
     width: 100%;
-    max-width: 900px;
+    max-width: 1080px;
     margin-top: 1rem;
     text-align: left;
     color: var(--color-text);
@@ -511,7 +511,7 @@ h1, h2, h3, h4, h5, h6 {
 
 /* Top 60% Image Section */
 .event-card__image-section {
-    height: 190px;
+    height: 260px;
     width: 100%;
     position: relative;
     overflow: hidden;
