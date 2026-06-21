@@ -190,7 +190,7 @@ foreach ($waitlistItems as $wi) {
             </nav>
             
             <div class="sidebar__footer">
-                <a href="index.html" class="sidebar__link">
+                <a href="index.php" class="sidebar__link">
                     <svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
                     <span>Browse Events</span>
                 </a>
@@ -559,7 +559,7 @@ foreach ($waitlistItems as $wi) {
                                 <line x1="9" y1="5" x2="9" y2="19"></line>
                             </svg>
                         </div>
-                        <p class="empty-state__text">You haven't booked any events yet. <a href="index.html" class="link">Browse events</a></p>
+                        <p class="empty-state__text">You haven't booked any events yet. <a href="index.php" class="link">Browse events</a></p>
                     </div>
                 </section>
 
@@ -577,7 +577,7 @@ foreach ($waitlistItems as $wi) {
                                 <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
                             </svg>
                         </div>
-                        <p class="empty-state__text">You haven't saved any events yet. <a href="index.html" class="link">Browse events</a></p>
+                        <p class="empty-state__text">You haven't saved any events yet. <a href="index.php" class="link">Browse events</a></p>
                     </div>
                 </section>
             </div>

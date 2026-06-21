@@ -75,7 +75,7 @@
 
                 // Store basic user info for quick access
                 localStorage.setItem('user', JSON.stringify(data.user));
-                window.location.href = 'index.html';
+                window.location.href = 'index.php';
 
             } catch (err) {
                 showError(loginError, 'Network error. Please try again.');
@@ -125,7 +125,7 @@
                 }
 
                 localStorage.setItem('user', JSON.stringify(data.user));
-                window.location.href = 'index.html';
+                window.location.href = 'index.php';
 
             } catch (err) {
                 showError(registerError, 'Network error. Please try again.');

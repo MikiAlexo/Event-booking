@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Browse and book exciting events on EventHub. Find concerts, workshops, meetups and more.">
+    <title>EventHub — Discover Events</title>
+    <link rel="stylesheet" href="css/styles.css?v=p3r-3">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+
+
+    <!-- ─── Navigation ─────────────────────────────────────── -->
+    <nav class="navbar" id="navbar">
+        <div class="navbar__inner container">
+            <a href="index.php" class="navbar__brand">
+                <span class="navbar__icon">
+                    <svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="square" stroke-linejoin="miter" style="width:1.25rem; height:1.25rem;">
+                        <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+                    </svg>
+                </span>
+                <span class="navbar__name">EventHub</span>
+            </a>
+            <div class="navbar__links">
+                <!-- Logged-out links -->
+                <div id="nav-guest">
+                    <a href="auth.html" class="btn btn--outline btn--sm"><span>Sign In</span></a>
+                </div>
+                <!-- Logged-in links -->
+                <div id="nav-user" class="hidden">
+                    <span id="nav-balance" class="nav-balance" style="margin-right: 1rem;"></span>
+                    <a href="dashboard.php" class="btn btn--ghost btn--sm"><span>Dashboard</span></a>
+                    <button id="nav-logout" class="btn btn--outline btn--sm"><span>Logout</span></button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- ─── Hero Section ───────────────────────────────────── -->
+    <header class="hero" style="background-image: linear-gradient(rgba(11, 15, 25, 0.65), rgba(11, 15, 25, 0.85)), url('uploads/hero_concert.png');">
+        <div class="hero__inner container">
+            <h1 class="hero__title"><span class="accent-text">Every Culture,</span> Every Event, <span class="accent-text">One Platform.</span></h1>
+            <p class="hero__subtitle">Discover concerts, festivals, conferences, food experiences, and cultural celebrations happening across Australia.</p>
+            
+            <!-- Floating Search Bar -->
+            <div class="search-bar-pill">
+                <div class="search-bar-pill__field">
+                    <div class="search-bar-pill__icon">
+                        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                    </div>
+                    <div class="search-bar-pill__content">
+                        <label for="filter-search" class="search-bar-pill__label">Search Event</label>
+                        <input type="text" id="filter-search" class="search-bar-pill__input" placeholder="What's on your mind?">
+                    </div>
+                </div>
+                
+                <div class="search-bar-pill__divider"></div>
+                
+                <div class="search-bar-pill__field">
+                    <div class="search-bar-pill__icon">
+                        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a8 8 0 0 0-8 8c0 5.25 8 12 8 12s8-6.75 8-12a8 8 0 0 0-8-8z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+                    </div>
+                    <div class="search-bar-pill__content">
+                        <label for="filter-location" class="search-bar-pill__label">Location</label>
+                        <input type="text" id="filter-location" class="search-bar-pill__input" placeholder="Sydney, Australia">
+                    </div>
+                </div>
+                
+                <div class="search-bar-pill__divider"></div>
+                
+                <div class="search-bar-pill__field">
+                    <div class="search-bar-pill__icon">
+                        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                    </div>
+                    <div class="search-bar-pill__content">
+                        <label for="filter-date-from" class="search-bar-pill__label">When</label>
+                        <input type="date" id="filter-date-from" class="search-bar-pill__input">
+                    </div>
+                </div>
+                
+                <button id="filter-btn" class="search-bar-pill__btn">Explore Nearby</button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Hidden compatibility controls to prevent events.js errors -->
+    <div style="display: none;">
+        <select id="filter-type">
+            <option value="">All Types</option>
+            <option value="Concert">Concert</option>
+            <option value="Workshop">Workshop</option>
+            <option value="Meetup">Meetup</option>
+            <option value="Conference">Conference</option>
+            <option value="Sports">Sports</option>
+            <option value="Exhibition">Exhibition</option>
+            <option value="Food">Food</option>
+            <option value="Other">Other</option>
+        </select>
+        <input type="date" id="filter-date-to">
+        <button id="filter-reset"></button>
+    </div>
+
+    <!-- ─── Trending & Location Pills ────────────────────────── -->
+    <section class="trending container">
+        <div class="trending__header">
+            <div class="trending__header-text">
+                <h2 class="section-title">Trending This Week</h2>
+                <p class="section-subtitle">Discover the most popular events happening around you</p>
+            </div>
+            <div class="carousel-nav">
+                <button class="carousel-nav__btn carousel-nav__btn--prev" id="events-prev" aria-label="Previous">
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+                </button>
+                <button class="carousel-nav__btn carousel-nav__btn--next" id="events-next" aria-label="Next">
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+                </button>
+            </div>
+        </div>
+        
+        <div class="location-pills-container">
+            <div class="location-pills" id="location-pills">
+                <button class="location-pill active" data-location="">For You</button>
+                <button class="location-pill" data-location="Online">Online</button>
+                <button class="location-pill" data-location="Sydney">Sydney</button>
+                <button class="location-pill" data-location="Melbourne">Melbourne</button>
+                <button class="location-pill" data-location="Addis Ababa">Addis Ababa</button>
+                <button class="location-pill" data-location="4Kilo-Axum">4Kilo-Axum</button>
+            </div>
+        </div>
+    </section>
+
+    <!-- ─── Events Grid ────────────────────────────────────── -->
+    <main class="container">
+        <div id="events-grid" class="events-grid">
+            <!-- Dynamically populated -->
+        </div>
+        <div id="events-empty" class="empty-state hidden">
+            <div class="empty-state__icon" style="display:flex; justify-content:center; margin-bottom:1.5rem;">
+                <svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" style="width:3rem; height:3rem; color:var(--color-primary);">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+            </div>
+            <p class="empty-state__text">No events found. Try adjusting your filters!</p>
+        </div>
+        <div id="events-loading" class="loading-spinner">
+            <div class="spinner"></div>
+        </div>
+    </main>
+
+    <!-- ─── Category Grid Section ──────────────────────────── -->
+    <section class="categories container">
+        <div class="categories__header">
+            <h2 class="section-title text-center">Browse by Category</h2>
+            <p class="section-subtitle text-center">Explore events that match your interests</p>
+        </div>
+        
+        <div class="categories-grid">
+            <div class="category-card" data-type="Concert" style="background-image: linear-gradient(rgba(11, 15, 25, 0.4), rgba(11, 15, 25, 0.7)), url('https://images.unsplash.com/photo-1506157786151-b8491531f063?q=80&w=600&auto=format&fit=crop');">
+                <div class="category-card__overlay"></div>
+                <span class="category-card__text">Music</span>
+            </div>
+            <div class="category-card" data-type="Workshop" style="background-image: linear-gradient(rgba(11, 15, 25, 0.4), rgba(11, 15, 25, 0.7)), url('https://images.unsplash.com/photo-1531482615713-2afd69097998?q=80&w=600&auto=format&fit=crop');">
+                <div class="category-card__overlay"></div>
+                <span class="category-card__text">Workshops</span>
+            </div>
+            <div class="category-card" data-type="Conference" style="background-image: linear-gradient(rgba(11, 15, 25, 0.4), rgba(11, 15, 25, 0.7)), url('https://images.unsplash.com/photo-1540575467063-178a50c2df87?q=80&w=600&auto=format&fit=crop');">
+                <div class="category-card__overlay"></div>
+                <span class="category-card__text">Conferences</span>
+            </div>
+            <div class="category-card" data-type="Meetup" style="background-image: linear-gradient(rgba(11, 15, 25, 0.4), rgba(11, 15, 25, 0.7)), url('https://images.unsplash.com/photo-1511632765486-a01980e01a18?q=80&w=600&auto=format&fit=crop');">
+                <div class="category-card__overlay"></div>
+                <span class="category-card__text">Meetups</span>
+            </div>
+            <div class="category-card" data-type="Sports" style="background-image: linear-gradient(rgba(11, 15, 25, 0.4), rgba(11, 15, 25, 0.7)), url('https://images.unsplash.com/photo-1461896836934-ffe607ba8211?q=80&w=600&auto=format&fit=crop');">
+                <div class="category-card__overlay"></div>
+                <span class="category-card__text">Sports</span>
+            </div>
+            <div class="category-card" data-type="Exhibition" style="background-image: linear-gradient(rgba(11, 15, 25, 0.4), rgba(11, 15, 25, 0.7)), url('https://images.unsplash.com/photo-1531058020387-3be344559767?q=80&w=600&auto=format&fit=crop');">
+                <div class="category-card__overlay"></div>
+                <span class="category-card__text">Exhibitions</span>
+            </div>
+            <div class="category-card" data-type="Food" style="background-image: linear-gradient(rgba(11, 15, 25, 0.4), rgba(11, 15, 25, 0.7)), url('https://images.unsplash.com/photo-1555396273-367ea4eb4db5?q=80&w=600&auto=format&fit=crop');">
+                <div class="category-card__overlay"></div>
+                <span class="category-card__text">Food</span>
+            </div>
+            <div class="category-card" data-type="Other" style="background-image: linear-gradient(rgba(11, 15, 25, 0.4), rgba(11, 15, 25, 0.7)), url('https://images.unsplash.com/photo-1533174072545-7a4b6ad7a6c3?q=80&w=600&auto=format&fit=crop');">
+                <div class="category-card__overlay"></div>
+                <span class="category-card__text">Other</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- ─── Event Details Modal ────────────────────────────── -->
+    <div id="event-modal" class="modal hidden">
+        <div class="modal__backdrop" id="modal-backdrop"></div>
+        <div class="modal__content">
+            <button class="modal__close" id="modal-close">&times;</button>
+            <div class="modal__badge" id="modal-type"></div>
+            <h2 class="modal__title" id="modal-title"></h2>
+            <div class="modal__meta" style="margin-bottom:0.5rem;">
+                <span id="modal-date"></span>
+                <span id="modal-host"></span>
+            </div>
+            <div class="modal__meta" style="margin-bottom:1rem; font-weight: 600; color: var(--color-primary);">
+                <span id="modal-location" style="margin-right:1rem;"></span>
+                <span id="modal-price"></span>
+            </div>
+            <div id="modal-image-container" class="modal__image-container" style="display:none;">
+                <img id="modal-image" src="" alt="" class="modal__image">
+            </div>
+            <p class="modal__desc" id="modal-desc"></p>
+            <div class="modal__seats">
+                <div class="seats-bar">
+                    <div class="seats-bar__fill" id="modal-seats-bar"></div>
+                </div>
+                <span id="modal-seats-text"></span>
+            </div>
+            <div class="modal__actions" style="display: flex; gap: 0.75rem;">
+                <button id="modal-book-btn" class="btn btn--primary"><span>Book Now</span></button>
+                <button id="modal-save-btn" class="btn btn--outline"><span>Save Event</span></button>
+            </div>
+            <div id="modal-message" class="auth-error" style="display:none;"></div>
+        </div>
+    </div>
+
+    <!-- ─── Footer ─────────────────────────────────────────── -->
+    <?php include 'footer.php'; ?>
+
+    <script src="js/p3r-dropdown.js"></script>
+    <script src="js/events.js?v=1.0.3"></script>
+</body>
+</html>

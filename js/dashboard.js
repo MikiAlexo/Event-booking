@@ -955,7 +955,7 @@
 
         // Ticket action (redirects to browse detail / handles booking flow)
         card.addEventListener('click', () => {
-            window.location.href = `index.html?event_id=${ev.id}`;
+            window.location.href = `index.php?event_id=${ev.id}`;
         });
 
         return card;
